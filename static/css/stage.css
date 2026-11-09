@@ -247,6 +247,227 @@
     box-sizing: border-box;
 }
 
+/* Thẻ cụm thực thể mở rộng (Cluster Card) khi có nhiều đối tượng tập trung dày đặc */
+.explorer-cluster-card {
+    position: absolute;
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid rgba(45, 212, 191, 0.4);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    z-index: 12;
+    display: flex;
+    flex-direction: column;
+    width: 31%;
+    max-width: 340px;
+    box-sizing: border-box;
+}
+
+.explorer-cluster-card.lane-left {
+    left: 3%;
+    right: auto;
+}
+
+.explorer-cluster-card.lane-center {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+}
+
+.explorer-cluster-card.lane-right {
+    left: auto;
+    right: 3%;
+}
+
+.explorer-cluster-card:hover {
+    border-color: var(--hud-accent-teal);
+    box-shadow: 0 12px 36px rgba(45, 212, 191, 0.25);
+}
+
+.cluster-card-header {
+    padding: 0.85rem 1rem 0.65rem;
+    background: linear-gradient(135deg, rgba(45, 212, 191, 0.12), rgba(15, 23, 42, 0.6));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cluster-header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.cluster-badge-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(45, 212, 191, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--hud-accent-teal);
+    flex-shrink: 0;
+}
+
+.cluster-badge-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.cluster-header-titles {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    overflow: hidden;
+}
+
+.cluster-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cluster-depth {
+    font-size: 0.75rem;
+    color: var(--hud-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cluster-total-pill {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(45, 212, 191, 0.25);
+    color: var(--hud-accent-teal);
+    border: 1px solid rgba(45, 212, 191, 0.4);
+}
+
+.cluster-preview-list,
+.cluster-expanded-list {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.cluster-expanded-list {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.cluster-mini-item,
+.cluster-expanded-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cluster-mini-item:hover,
+.cluster-mini-item:focus-visible,
+.cluster-expanded-item:hover,
+.cluster-expanded-item:focus-visible {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--hud-accent-cyan);
+    outline: none;
+    transform: translateX(2px);
+}
+
+.cluster-mini-thumb {
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.8);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cluster-mini-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cluster-mini-placeholder {
+    font-size: 0.8rem;
+    color: var(--hud-accent-cyan);
+    opacity: 0.7;
+}
+
+.cluster-mini-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.cluster-mini-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cluster-mini-type {
+    font-size: 0.72rem;
+    color: var(--hud-text-secondary);
+}
+
+.cluster-mini-arrow {
+    color: var(--hud-accent-cyan);
+    font-size: 0.85rem;
+    opacity: 0.6;
+    transition: transform 0.2s ease;
+}
+
+.cluster-mini-item:hover .cluster-mini-arrow,
+.cluster-expanded-item:hover .cluster-mini-arrow {
+    opacity: 1;
+    transform: translateX(2px);
+}
+
+.cluster-toggle-btn {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--hud-accent-cyan);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cluster-toggle-btn:hover {
+    background: rgba(56, 189, 248, 0.12);
+    color: #ffffff;
+}
+
 /* Phân bố 3 làn (Left, Center, Right) trên Desktop */
 .explorer-card.lane-left {
     left: 3%;
@@ -500,7 +721,8 @@
 
 /* Responsive trên màn hình di động */
 @media (max-width: 768px) {
-    .explorer-card {
+    .explorer-card,
+    .explorer-cluster-card {
         left: 50% !important;
         right: auto !important;
         transform: translateX(-50%) !important;
@@ -509,7 +731,8 @@
     }
 
     .explorer-card:hover,
-    .explorer-card:focus-visible {
+    .explorer-card:focus-visible,
+    .explorer-cluster-card:hover {
         transform: translateX(-50%) translateY(-4px) !important;
     }
 

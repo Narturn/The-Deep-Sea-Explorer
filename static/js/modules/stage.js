@@ -142,62 +142,119 @@ function renderStage(trackEl, layers, items, isMobile) {
 }
 
 /**
- * Thuật toán phát hiện va chạm và phân bố thẻ sang các làn (trái, giữa, phải)
+ * Thuật toán phát hiện va chạm, gom cụm tự động và phân bố thẻ theo 3 làn
+ * Áp dụng tổng quát cho mọi đối tượng động từ database mà không hardcode
  */
-function layoutExplorerItems(items, isMobile) {
+export function layoutExplorerItems(items, isMobile) {
     if (!items || items.length === 0) return [];
 
-    // Sắp xếp items theo chiều tăng dần của depth_m
+    // 1. Sắp xếp danh sách items tăng dần theo depth_m
     const sorted = [...items].sort((a, b) => a.depth_m - b.depth_m);
 
-    // Ước tính chiều cao trung bình của thẻ kèm khoảng đệm an toàn
-    const CARD_HEIGHT = isMobile ? 210 : 230;
-    const GAP = 24;
+    // Hằng số kích thước hình học & khoảng cách an toàn
+    const CLUSTER_WINDOW_M = 35; // Khoảng độ sâu (35m = 140px) để nhận diện vùng tập trung mật độ cao
+    const MAX_ITEMS_PER_WINDOW = isMobile ? 2 : 3; // Ngưỡng dung lượng làn tối đa tại một vùng độ sâu
+    const CARD_HEIGHT_ESTIMATE = isMobile ? 210 : 230;
+    const CLUSTER_CARD_HEIGHT = isMobile ? 220 : 240;
+    const CARD_GAP = 24;
+    const MIN_STAGE_TOP = 170; // Tránh va chạm với HUD cố định (72px) và mốc 0m (90px)
 
-    // Trên mobile: dồn vào 1 làn căn giữa để phù hợp màn hình nhỏ
+    // 2. Gom các đối tượng quá gần nhau thành các nhóm lân cận (Proximity Groups)
+    const proximityGroups = [];
+    let currentGroup = [sorted[0]];
+
+    for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i - 1];
+        const curr = sorted[i];
+
+        if (curr.depth_m - prev.depth_m <= CLUSTER_WINDOW_M) {
+            currentGroup.push(curr);
+        } else {
+            proximityGroups.push(currentGroup);
+            currentGroup = [curr];
+        }
+    }
+    if (currentGroup.length > 0) {
+        proximityGroups.push(currentGroup);
+    }
+
+    // 3. Phân loại: Nhóm vượt quá sức chứa của các làn -> Gom thành Cụm (Cluster); Còn lại -> Thẻ đơn
+    const layoutUnits = [];
+    proximityGroups.forEach((group) => {
+        if (group.length > MAX_ITEMS_PER_WINDOW) {
+            // Tự động gom thành cụm có thể mở rộng
+            const avgDepth = Math.round(group.reduce((sum, it) => sum + it.depth_m, 0) / group.length);
+            layoutUnits.push({
+                isCluster: true,
+                items: group,
+                depth_m: avgDepth,
+                anchorY: avgDepth * PIXELS_PER_METER,
+            });
+        } else {
+            // Hiển thị từng thẻ độc lập
+            group.forEach((item) => {
+                layoutUnits.push({
+                    isCluster: false,
+                    item: item,
+                    depth_m: item.depth_m,
+                    anchorY: item.depth_m * PIXELS_PER_METER,
+                });
+            });
+        }
+    });
+
+    // 4. Bố cục trên Mobile: 1 làn duy nhất căn giữa
     if (isMobile) {
-        let lastBottomY = -Infinity;
-        return sorted.map((item) => {
-            const anchorY = item.depth_m * PIXELS_PER_METER;
-            const displayY = Math.max(anchorY, lastBottomY + GAP);
-            lastBottomY = displayY + CARD_HEIGHT;
+        let lastBottom = MIN_STAGE_TOP;
+        return layoutUnits.map((unit) => {
+            const rawTargetY = Math.max(unit.anchorY, MIN_STAGE_TOP);
+            const displayY = Math.max(rawTargetY, lastBottom + CARD_GAP);
+            const height = unit.isCluster ? CLUSTER_CARD_HEIGHT : CARD_HEIGHT_ESTIMATE;
+            lastBottom = displayY + height;
+
             return {
-                item,
-                lane: 1, // center
-                anchorY,
+                ...unit,
+                lane: 1, // Làn giữa
                 displayY,
-                hasOffset: Math.abs(displayY - anchorY) > 8,
+                hasOffset: Math.abs(displayY - unit.anchorY) > 8,
             };
         });
     }
 
-    // Trên Desktop: 3 làn song song (0: Trái, 1: Giữa, 2: Phải)
-    const laneBottoms = [-Infinity, -Infinity, -Infinity];
+    // 5. Bố cục trên Desktop: 3 làn song song [0: Trái, 1: Giữa, 2: Phải]
+    const laneBottoms = [MIN_STAGE_TOP, MIN_STAGE_TOP, MIN_STAGE_TOP];
 
-    return sorted.map((item, idx) => {
-        const anchorY = item.depth_m * PIXELS_PER_METER;
-        const preferredLane = idx % 3;
+    return layoutUnits.map((unit, idx) => {
+        const rawTargetY = Math.max(unit.anchorY, MIN_STAGE_TOP);
+        // Cụm ưu tiên đặt ở làn giữa để cân đối thị giác, thẻ đơn ưu tiên xoay vòng 3 làn
+        const preferredLane = unit.isCluster ? 1 : (idx % 3);
+        const height = unit.isCluster ? CLUSTER_CARD_HEIGHT : CARD_HEIGHT_ESTIMATE;
 
         let chosenLane = preferredLane;
-        let displayY = anchorY;
+        let displayY = rawTargetY;
 
         // Thử đặt vào làn ưu tiên nếu không bị va chạm
-        if (anchorY >= laneBottoms[preferredLane] + GAP) {
+        if (rawTargetY >= laneBottoms[preferredLane] + CARD_GAP) {
             chosenLane = preferredLane;
-            displayY = anchorY;
+            displayY = rawTargetY;
         } else {
-            // Thử 2 làn còn lại xem có làn nào trống tại đúng độ sâu anchorY không
-            const otherLane1 = (preferredLane + 1) % 3;
-            const otherLane2 = (preferredLane + 2) % 3;
+            // Thử các làn còn lại xem có làn nào trống tại đúng độ sâu rawTargetY không
+            const candidates = unit.isCluster
+                ? [1, 0, 2]
+                : [(preferredLane + 1) % 3, (preferredLane + 2) % 3];
 
-            if (anchorY >= laneBottoms[otherLane1] + GAP) {
-                chosenLane = otherLane1;
-                displayY = anchorY;
-            } else if (anchorY >= laneBottoms[otherLane2] + GAP) {
-                chosenLane = otherLane2;
-                displayY = anchorY;
-            } else {
-                // Cả 3 làn đều bị chiếm tại anchorY -> chọn làn kết thúc sớm nhất để hạ thẻ xuống
+            let foundFree = false;
+            for (const lane of candidates) {
+                if (rawTargetY >= laneBottoms[lane] + CARD_GAP) {
+                    chosenLane = lane;
+                    displayY = rawTargetY;
+                    foundFree = true;
+                    break;
+                }
+            }
+
+            // Nếu cả 3 làn đều bị chiếm tại độ sâu này -> chọn làn kết thúc sớm nhất để hạ thẻ xuống
+            if (!foundFree) {
                 let minBottom = laneBottoms[0];
                 chosenLane = 0;
                 for (let l = 1; l < 3; l++) {
@@ -206,33 +263,41 @@ function layoutExplorerItems(items, isMobile) {
                         chosenLane = l;
                     }
                 }
-                displayY = minBottom + GAP;
+                displayY = minBottom + CARD_GAP;
             }
         }
 
-        laneBottoms[chosenLane] = displayY + CARD_HEIGHT;
+        laneBottoms[chosenLane] = displayY + height;
 
         return {
-            item,
+            ...unit,
             lane: chosenLane,
-            anchorY,
             displayY,
-            hasOffset: Math.abs(displayY - anchorY) > 8,
+            hasOffset: Math.abs(displayY - unit.anchorY) > 8,
         };
     });
 }
 
 /**
- * Tạo thẻ hình ảnh ExplorerCard và các mốc chỉ vị trí nếu bị dịch chuyển
+ * Tạo phần tử DOM (Thẻ đơn hoặc Cụm mở rộng) dựa trên kết quả layout
  */
-function createExplorerCardNode(layoutItem) {
+function createExplorerCardNode(layoutUnit) {
+    if (layoutUnit.isCluster) {
+        return createClusterCardNode(layoutUnit);
+    }
+    return createSingleCardNode(layoutUnit);
+}
+
+/**
+ * Tạo Thẻ đơn ExplorerCard
+ */
+function createSingleCardNode(layoutItem) {
     const { item, lane, anchorY, displayY, hasOffset } = layoutItem;
     const fragment = document.createDocumentFragment();
-
     const laneClass = lane === 0 ? 'lane-left' : lane === 1 ? 'lane-center' : 'lane-right';
 
-    // 1. Khi thẻ bị dịch chuyển do va chạm với thẻ khác ở độ sâu gần nhau:
-    // Tạo mốc neo độ sâu thực tế (anchor pin) và đường nối (connector line)
+    // 1. Khi thẻ bị dịch chuyển khỏi điểm neo để tránh va chạm:
+    // Giữ mốc neo tại chính xác depth_m * 4px và vẽ đường nối đến vị trí hiển thị
     if (hasOffset) {
         const anchorEl = document.createElement('div');
         anchorEl.className = `card-depth-anchor ${laneClass}`;
@@ -245,8 +310,10 @@ function createExplorerCardNode(layoutItem) {
 
         const lineEl = document.createElement('div');
         lineEl.className = `card-connector-line ${laneClass}`;
-        lineEl.style.top = `${anchorY}px`;
-        lineEl.style.height = `${displayY - anchorY}px`;
+        const topY = Math.min(anchorY, displayY);
+        const heightY = Math.abs(displayY - anchorY);
+        lineEl.style.top = `${topY}px`;
+        lineEl.style.height = `${heightY}px`;
         fragment.appendChild(lineEl);
     }
 
@@ -297,7 +364,6 @@ function createExplorerCardNode(layoutItem) {
         </div>
     `;
 
-    // Click và bàn phím (Enter / Space) để mở Inspector
     card.addEventListener('click', () => {
         openInspector(item, card);
     });
@@ -310,6 +376,161 @@ function createExplorerCardNode(layoutItem) {
     });
 
     fragment.appendChild(card);
+    return fragment;
+}
+
+/**
+ * Tạo Thẻ cụm mở rộng (Cluster Card) khi có nhiều đối tượng tập trung tại một vùng độ sâu
+ */
+function createClusterCardNode(layoutUnit) {
+    const { items, depth_m, lane, anchorY, displayY, hasOffset } = layoutUnit;
+    const fragment = document.createDocumentFragment();
+    const laneClass = lane === 0 ? 'lane-left' : lane === 1 ? 'lane-center' : 'lane-right';
+
+    // 1. Mốc neo độ sâu thực tế & đường nối nếu cụm bị dịch chuyển
+    if (hasOffset) {
+        const anchorEl = document.createElement('div');
+        anchorEl.className = `card-depth-anchor ${laneClass}`;
+        anchorEl.style.top = `${anchorY}px`;
+        anchorEl.innerHTML = `
+            <span class="anchor-pin-dot" style="background: var(--hud-accent-teal); box-shadow: 0 0 10px var(--hud-accent-teal);"></span>
+            <span class="anchor-pin-label" style="color: var(--hud-accent-teal); border-color: rgba(45, 212, 191, 0.4);">~${numberFormatter.format(depth_m)} m</span>
+        `;
+        fragment.appendChild(anchorEl);
+
+        const lineEl = document.createElement('div');
+        lineEl.className = `card-connector-line ${laneClass}`;
+        const topY = Math.min(anchorY, displayY);
+        const heightY = Math.abs(displayY - anchorY);
+        lineEl.style.top = `${topY}px`;
+        lineEl.style.height = `${heightY}px`;
+        lineEl.style.borderLeftColor = 'rgba(45, 212, 191, 0.45)';
+        fragment.appendChild(lineEl);
+    }
+
+    // 2. Thẻ cụm (Cluster Card)
+    const clusterCard = document.createElement('div');
+    clusterCard.className = `explorer-cluster-card ${laneClass}`;
+    clusterCard.style.top = `${displayY}px`;
+
+    // Đếm số lượng sinh vật và cột mốc trong cụm
+    const creatureCount = items.filter((it) => it.item_type === 'CREATURE').length;
+    const milestoneCount = items.length - creatureCount;
+    const countSummary = [
+        creatureCount > 0 ? `${creatureCount} sinh vật` : '',
+        milestoneCount > 0 ? `${milestoneCount} cột mốc` : '',
+    ].filter(Boolean).join(' • ');
+
+    // Hiển thị tối đa 3 item xem trước trong chế độ thu gọn
+    const previewItems = items.slice(0, 3);
+    const hiddenCount = items.length - previewItems.length;
+
+    clusterCard.innerHTML = `
+        <div class="cluster-card-header">
+            <div class="cluster-header-title-row">
+                <div class="cluster-badge-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                </div>
+                <div class="cluster-header-titles">
+                    <span class="cluster-title">Cụm đối tượng thám hiểm</span>
+                    <span class="cluster-depth">~${numberFormatter.format(depth_m)} m • ${countSummary}</span>
+                </div>
+                <span class="cluster-total-pill">${items.length}</span>
+            </div>
+        </div>
+
+        <div class="cluster-preview-list">
+            ${previewItems.map((it) => `
+                <div class="cluster-mini-item" data-id="${it.id}" role="button" tabindex="0" aria-label="Xem ${it.name}">
+                    <div class="cluster-mini-thumb">
+                        ${it.image_url
+                            ? `<img src="${it.image_url}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                               <div class="cluster-mini-placeholder" style="display: none;">●</div>`
+                            : `<div class="cluster-mini-placeholder">●</div>`}
+                    </div>
+                    <div class="cluster-mini-info">
+                        <span class="cluster-mini-name">${it.name}</span>
+                        <span class="cluster-mini-type">${it.item_type === 'CREATURE' ? 'Sinh vật' : 'Cột mốc'} • ${numberFormatter.format(it.depth_m)} m</span>
+                    </div>
+                    <span class="cluster-mini-arrow">→</span>
+                </div>
+            `).join('')}
+        </div>
+
+        <div class="cluster-expanded-container" style="display: none;">
+            <div class="cluster-expanded-list">
+                ${items.map((it) => `
+                    <div class="cluster-expanded-item" data-id="${it.id}" role="button" tabindex="0" aria-label="Xem ${it.name}">
+                        <div class="cluster-mini-thumb">
+                            ${it.image_url
+                                ? `<img src="${it.image_url}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                   <div class="cluster-mini-placeholder" style="display: none;">●</div>`
+                                : `<div class="cluster-mini-placeholder">●</div>`}
+                        </div>
+                        <div class="cluster-mini-info">
+                            <span class="cluster-mini-name">${it.name}</span>
+                            <span class="cluster-mini-type">${it.item_type === 'CREATURE' ? 'Sinh vật' : 'Cột mốc'} • ${numberFormatter.format(it.depth_m)} m</span>
+                        </div>
+                        <span class="cluster-mini-arrow">→</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+
+        <button class="cluster-toggle-btn" type="button" aria-expanded="false">
+            <span class="toggle-btn-label">▾ Xem tất cả ${items.length} đối tượng</span>
+        </button>
+    `;
+
+    // Gắn sự kiện click mở Inspector cho từng đối tượng trong cụm
+    const attachItemClickListeners = (container) => {
+        container.querySelectorAll('[data-id]').forEach((el) => {
+            const itemId = parseInt(el.getAttribute('data-id'), 10);
+            const targetItem = items.find((it) => it.id === itemId);
+            if (targetItem) {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openInspector(targetItem, el);
+                });
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openInspector(targetItem, el);
+                    }
+                });
+            }
+        });
+    };
+
+    const previewList = clusterCard.querySelector('.cluster-preview-list');
+    const expandedContainer = clusterCard.querySelector('.cluster-expanded-container');
+    const toggleBtn = clusterCard.querySelector('.cluster-toggle-btn');
+    const toggleLabel = clusterCard.querySelector('.toggle-btn-label');
+
+    attachItemClickListeners(previewList);
+    attachItemClickListeners(expandedContainer);
+
+    // Xử lý nút mở rộng / thu gọn danh sách cụm
+    toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+        if (isExpanded) {
+            expandedContainer.style.display = 'none';
+            previewList.style.display = 'flex';
+            toggleBtn.setAttribute('aria-expanded', 'false');
+            toggleLabel.textContent = `▾ Xem tất cả ${items.length} đối tượng`;
+            clusterCard.classList.remove('is-expanded');
+        } else {
+            expandedContainer.style.display = 'block';
+            previewList.style.display = 'none';
+            toggleBtn.setAttribute('aria-expanded', 'true');
+            toggleLabel.textContent = `▴ Thu gọn danh sách`;
+            clusterCard.classList.add('is-expanded');
+        }
+    });
+
+    fragment.appendChild(clusterCard);
     return fragment;
 }
 
@@ -447,7 +668,7 @@ function setupIntersectionObserver() {
         threshold: 0.05,
     });
 
-    document.querySelectorAll('.explorer-card, .layer-boundary-marker, .journey-endpoint').forEach((el) => {
+    document.querySelectorAll('.explorer-card, .explorer-cluster-card, .layer-boundary-marker, .journey-endpoint').forEach((el) => {
         observer.observe(el);
     });
 }

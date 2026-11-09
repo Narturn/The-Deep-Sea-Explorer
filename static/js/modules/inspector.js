@@ -90,12 +90,13 @@ function populateDrawerContent(item) {
     const scientificEl = document.getElementById('inspector-scientific');
     const depthValEl = document.getElementById('inspector-depth-val');
     const descEl = document.getElementById('inspector-description');
+    const factContainerEl = document.getElementById('inspector-fact-container');
     const factEl = document.getElementById('inspector-fact');
     const imageWrapperEl = document.getElementById('inspector-image-wrapper');
     const licenseBoxEl = document.getElementById('inspector-license-box');
     const detailLinkEl = document.getElementById('inspector-detail-link');
 
-    // Trường hợp hiển thị thông tin tầng đại dương (OceanLayer)
+    // 1. Trường hợp LAYER: bỏ hoàn toàn khung Fact, chỉ hiển thị description một lần
     if (item.item_type === 'LAYER') {
         if (typeBadgeEl) typeBadgeEl.textContent = 'Tầng đại dương';
         if (layerBadgeEl) layerBadgeEl.textContent = item.layer_badge || 'Phân tầng';
@@ -108,11 +109,11 @@ function populateDrawerContent(item) {
             depthValEl.textContent = item.depth_display || `${numberFormatter.format(item.depth_m)} m`;
         }
         if (descEl) {
-            descEl.textContent = item.short_description || 'Chưa có mô tả đặc điểm tầng.';
+            descEl.textContent = item.description || item.short_description || 'Chưa có mô tả đặc điểm tầng.';
         }
-        if (factEl) {
-            factEl.textContent = item.fact || 'Đang cập nhật đặc điểm chi tiết của tầng đại dương này.';
-            factEl.classList.remove('is-placeholder');
+        // Bỏ hoàn toàn khung Sự thật thú vị & Khoa học đối với LAYER
+        if (factContainerEl) {
+            factContainerEl.style.display = 'none';
         }
         if (imageWrapperEl) {
             imageWrapperEl.innerHTML = `
@@ -127,7 +128,7 @@ function populateDrawerContent(item) {
         return;
     }
 
-    // Thể loại & Tầng biển
+    // 2. Trường hợp CREATURE và MILESTONE:
     if (typeBadgeEl) {
         typeBadgeEl.textContent = item.item_type === 'CREATURE' ? 'Sinh vật biển' : 'Cột mốc';
     }
@@ -151,19 +152,32 @@ function populateDrawerContent(item) {
         depthValEl.textContent = `${numberFormatter.format(item.depth_m)} m`;
     }
 
-    // Mô tả ngắn
+    // Mô tả ngắn & Fact: giữ Fact riêng biệt, nếu trùng với short_description thì chỉ hiển thị 1 lần
+    const shortDesc = (item.short_description || '').trim();
+    const factText = (item.fact || '').trim();
+
     if (descEl) {
-        descEl.textContent = item.short_description || 'Nội dung thông tin đang được cập nhật.';
+        descEl.textContent = shortDesc || 'Nội dung thông tin đang được cập nhật.';
     }
 
-    // Sự thật thú vị & Thông tin khoa học mở rộng
-    if (factEl) {
-        if (item.fact && item.fact.trim()) {
-            factEl.textContent = item.fact;
-            factEl.classList.remove('is-placeholder');
+    if (factContainerEl) {
+        // Kiểm tra nếu fact trùng lặp hoàn toàn với short_description
+        if (factText && shortDesc && factText.toLowerCase() === shortDesc.toLowerCase()) {
+            factContainerEl.style.display = 'none';
+        } else if (factText) {
+            // Có Fact riêng biệt với nội dung khác
+            factContainerEl.style.display = 'flex';
+            if (factEl) {
+                factEl.textContent = factText;
+                factEl.classList.remove('is-placeholder');
+            }
         } else {
-            factEl.textContent = 'Nội dung giải thích khoa học đang được cập nhật.';
-            factEl.classList.add('is-placeholder');
+            // Chưa có Fact -> hiển thị placeholder tinh tế
+            factContainerEl.style.display = 'flex';
+            if (factEl) {
+                factEl.textContent = 'Nội dung giải thích khoa học đang được cập nhật.';
+                factEl.classList.add('is-placeholder');
+            }
         }
     }
 

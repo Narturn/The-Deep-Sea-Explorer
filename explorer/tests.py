@@ -132,6 +132,59 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
 
     @patch('explorer.views.ExplorerItem.objects')
     @patch('explorer.views.OceanLayer.objects')
+    def test_multiple_published_items_data_flow(self, mock_layer_qs, mock_item_qs):
+        mock_layer_qs.all.return_value.order_by.return_value = self.mock_layers[:1]
+
+        item1 = MagicMock()
+        item1.id = 1
+        item1.name = 'Rồng xanh'
+        item1.slug = 'rong-xanh'
+        item1.item_type = 'CREATURE'
+        item1.scientific_name = 'Glaucus'
+        item1.depth_m = 15
+        item1.layer_id = 1
+        item1.layer = self.mock_layers[0]
+        item1.short_description = 'Mô tả sên'
+        item1.fact = 'Nội dung fact'
+        item1.image_url = 'https://example.com/1.jpg'
+        item1.image_source_url = 'https://example.com/src'
+        item1.image_credit = 'Credit'
+        item1.image_license = 'CC'
+        item1.detail_url = 'https://example.com/detail'
+        item1.is_verified = True
+        item1.is_published = True
+
+        item2 = MagicMock()
+        item2.id = 2
+        item2.name = 'Tượng Chúa Cứu thế'
+        item2.slug = 'tuong-chua'
+        item2.item_type = 'MILESTONE'
+        item2.scientific_name = ''
+        item2.depth_m = 17
+        item2.layer_id = 1
+        item2.layer = self.mock_layers[0]
+        item2.short_description = 'Tượng đồng dưới đáy vịnh'
+        item2.fact = 'Tượng đồng dưới đáy vịnh'
+        item2.image_url = ''
+        item2.image_source_url = ''
+        item2.image_credit = ''
+        item2.image_license = ''
+        item2.detail_url = ''
+        item2.is_verified = True
+        item2.is_published = True
+
+        mock_item_qs.filter.return_value.select_related.return_value.order_by.return_value = [item1, item2]
+
+        view = IndexView()
+        context = view.get_context_data()
+        items = context['explorer_items_data']
+        self.assertEqual(len(items), 2)
+        self.assertEqual(items[0]['name'], 'Rồng xanh')
+        self.assertEqual(items[1]['name'], 'Tượng Chúa Cứu thế')
+        self.assertEqual(items[1]['depth_m'], 17)
+
+    @patch('explorer.views.ExplorerItem.objects')
+    @patch('explorer.views.OceanLayer.objects')
     def test_unpublished_items_are_excluded_by_filter(self, mock_layer_qs, mock_item_qs):
         mock_layer_qs.all.return_value.order_by.return_value = self.mock_layers
         mock_item_qs.filter.return_value.select_related.return_value.order_by.return_value = []
