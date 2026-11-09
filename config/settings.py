@@ -21,9 +21,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
     DJANGO_ALLOWED_HOSTS=(list, ['localhost', '127.0.0.1']),
+    DJANGO_CSRF_TRUSTED_ORIGINS=(list, []),
 )
 
-# Load .env file if present
+# Load .env file if present (local development)
 env_file = BASE_DIR / '.env'
 if env_file.exists():
     environ.Env.read_env(env_file)
@@ -40,9 +41,26 @@ except Exception as e:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOSTS')
+# Hosts & Domains Configuration
+ALLOWED_HOSTS = list(env('DJANGO_ALLOWED_HOSTS'))
+
+# Hỗ trợ tự động nhận diện hostname của Render trong Production
+render_external_hostname = env('RENDER_EXTERNAL_HOSTNAME', default=None)
+if render_external_hostname and render_external_hostname not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_external_hostname)
+
 if DEBUG:
-    ALLOWED_HOSTS = list(ALLOWED_HOSTS) + ['testserver']
+    ALLOWED_HOSTS.append('testserver')
+
+# CSRF Trusted Origins (Hỗ trợ Render URLs)
+CSRF_TRUSTED_ORIGINS = list(env('DJANGO_CSRF_TRUSTED_ORIGINS'))
+render_external_url = env('RENDER_EXTERNAL_URL', default=None)
+if render_external_url and render_external_url not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(render_external_url)
+if render_external_hostname:
+    render_origin = f"https://{render_external_hostname}"
+    if render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(render_origin)
 
 
 # Application definition
@@ -53,12 +71,14 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'explorer.apps.ExplorerConfig',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -100,7 +120,7 @@ else:
     raise ImproperlyConfigured(
         "DATABASE_URL environment variable is required. "
         "Explicit PostgreSQL connection is mandated; silent fallback to SQLite is disallowed. "
-        "Please configure DATABASE_URL in your .env file (e.g. DATABASE_URL=postgresql://user:password@localhost:5432/dbname)."
+        "Please configure DATABASE_URL in your .env file or environment (e.g. Neon PostgreSQL connection string)."
     )
 
 
@@ -144,12 +164,41 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# WhiteNoise storage: nén và gắn hash fingerprint cho static assets trong Production
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+
+# Reverse proxy & SSL Header cho Render
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Cấu hình bảo mật nâng cao cho môi trường Production (khi DEBUG = False)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = env.bool('DJANGO_SECURE_SSL_REDIRECT', default=True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = env.int('DJANGO_SECURE_HSTS_SECONDS', default=31536000)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
+default_email_backend = (
+    'django.core.mail.backends.smtp.EmailBackend'
+    if not DEBUG
+    else 'django.core.mail.backends.console.EmailBackend'
+)
+
 MAILERS = {
     'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        'BACKEND': env('DJANGO_EMAIL_BACKEND', default=default_email_backend),
     },
 }

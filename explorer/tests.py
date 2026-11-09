@@ -75,7 +75,7 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
         content = response.content.decode()
         self.assertIn('id="ocean-layers-data"', content)
         self.assertIn('id="explorer-items-data"', content)
-        self.assertIn('/static/js/main.js', content)
+        self.assertRegex(content, r'/static/js/main(\.[a-f0-9]+)?\.js')
 
         # Parse trực tiếp nội dung json_script để đảm bảo client JS đọc được chính xác tiếng Việt
         items_script_content = content.split('<script id="explorer-items-data" type="application/json">')[1].split('</script>')[0]
@@ -100,15 +100,15 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
         self.assertIn('id="particles-container"', content)
         self.assertIn('id="ocean-stage"', content)
         self.assertIn('id="vertical-track"', content)
-        self.assertIn('variables.css', content)
-        self.assertIn('base.css', content)
-        self.assertIn('hud.css', content)
-        self.assertIn('stage.css', content)
+        self.assertRegex(content, r'variables(\.[a-f0-9]+)?\.css')
+        self.assertRegex(content, r'base(\.[a-f0-9]+)?\.css')
+        self.assertRegex(content, r'hud(\.[a-f0-9]+)?\.css')
+        self.assertRegex(content, r'stage(\.[a-f0-9]+)?\.css')
         self.assertIn('type="module"', content)
 
         # Xác nhận các thành phần Phase 6 (Quick Jump & Inspector Drawer)
-        self.assertIn('quick_jump.css', content)
-        self.assertIn('inspector.css', content)
+        self.assertRegex(content, r'quick_jump(\.[a-f0-9]+)?\.css')
+        self.assertRegex(content, r'inspector(\.[a-f0-9]+)?\.css')
         self.assertIn('id="quick-jump-trigger"', content)
         self.assertIn('id="quick-jump-panel"', content)
         self.assertIn('id="quick-jump-layers-list"', content)
