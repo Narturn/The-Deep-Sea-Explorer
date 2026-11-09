@@ -7,6 +7,36 @@ import { openInspector } from './inspector.js';
 
 const numberFormatter = new Intl.NumberFormat('vi-VN');
 
+let cachedLayers = [];
+let cachedItems = [];
+let lastIsMobile = null;
+let resizeDebounceTimer = null;
+
+/**
+ * Tạo dữ liệu tầng đại dương chuyển sang Inspector Drawer
+ */
+export function createLayerInspectorItem(layer) {
+    if (!layer) return null;
+    const depthStr = `${numberFormatter.format(layer.depth_start_m)} m – ${numberFormatter.format(layer.depth_end_m)} m`;
+    return {
+        id: `layer-${layer.id}`,
+        name: `${layer.vietnamese_name} (${layer.name})`,
+        slug: `layer-${(layer.name || '').toLowerCase()}`,
+        item_type: 'LAYER',
+        layer_badge: `Tầng ${layer.sort_order}/5`,
+        layer_name: layer.vietnamese_name,
+        scientific_name: `${layer.name} Zone`,
+        depth_m: layer.depth_start_m,
+        depth_display: depthStr,
+        short_description: layer.description || `Phạm vi tầng đại dương từ ${depthStr}.`,
+        fact: `Mô tả khoa học: ${layer.description || 'Đang cập nhật đặc điểm chi tiết của tầng đại dương.'}\n\n• Phạm vi độ sâu: ${depthStr}\n• Thứ tự phân tầng: Tầng ${layer.sort_order}/5 của đại dương\n• Dải màu quang học: ${layer.color_start} → ${layer.color_end}`,
+        color_start: layer.color_start,
+        color_end: layer.color_end,
+        image_url: '',
+        detail_url: '',
+    };
+}
+
 /**
  * Khởi tạo và kết xuất cấu trúc sân khấu hành trình
  */
@@ -14,46 +44,53 @@ export function initStage(layers, items) {
     const trackEl = document.getElementById('vertical-track');
     if (!trackEl) return;
 
+    cachedLayers = layers || [];
+    cachedItems = items || [];
+    lastIsMobile = window.innerWidth < 768;
+
+    renderStage(trackEl, cachedLayers, cachedItems, lastIsMobile);
+
+    // Lắng nghe thay đổi kích thước màn hình để tự động sắp xếp lại bố cục
+    window.addEventListener('resize', handleWindowResize);
+}
+
+/**
+ * Xử lý resize có debounce
+ */
+function handleWindowResize() {
+    clearTimeout(resizeDebounceTimer);
+    resizeDebounceTimer = setTimeout(() => {
+        const currentIsMobile = window.innerWidth < 768;
+        if (currentIsMobile !== lastIsMobile) {
+            lastIsMobile = currentIsMobile;
+            const trackEl = document.getElementById('vertical-track');
+            if (trackEl) {
+                renderStage(trackEl, cachedLayers, cachedItems, currentIsMobile);
+            }
+        }
+    }, 150);
+}
+
+/**
+ * Kết xuất toàn bộ Center Stage
+ */
+function renderStage(trackEl, layers, items, isMobile) {
+    trackEl.innerHTML = '';
+
     // Chiều cao track chính xác theo tỷ lệ 1m = 4px
     const trackHeight = MAX_DEPTH_M * PIXELS_PER_METER;
     trackEl.style.height = `${trackHeight}px`;
 
-    // Tập hợp ID các item đã được gắn trực tiếp vào marker để tránh render card trùng lặp
-    const handledItemIds = new Set();
-
     // 1. Tạo điểm khởi đầu tại 0m: Tầng Nắng rọi (Epipelagic)
     const layer0 = layers && layers.length > 0 ? layers[0] : null;
-    const startMilestone = items ? items.find((i) => i.depth_m === 0 && i.item_type === 'MILESTONE') : null;
-    if (startMilestone) {
-        handledItemIds.add(startMilestone.id);
-    }
-    const startPoint = createEndpointMarker(
-        0,
-        layer0 ? `${layer0.vietnamese_name} (${layer0.name})` : 'Tầng Nắng rọi (Epipelagic)',
-        '0 m – Mặt biển • Bắt đầu hành trình thám hiểm xuống vùng biển sâu thẳm nhất hành tinh',
-        startMilestone
-    );
+    const startPoint = createStartPointMarker(layer0);
     trackEl.appendChild(startPoint);
 
-    // 2. Tạo các mốc ranh giới tầng đại dương (hiển thị tầng bắt đầu tại độ sâu đó)
+    // 2. Tạo các mốc ranh giới tầng đại dương (200m, 1.000m, 4.000m, 6.000m)
     if (layers && layers.length > 0) {
         layers.forEach((layer) => {
-            // Đặt marker ranh giới tại mốc bắt đầu của các tầng (từ 200m trở đi)
             if (layer.depth_start_m > 0) {
-                const milestone = items ? items.find(
-                    (i) => i.depth_m === layer.depth_start_m && i.item_type === 'MILESTONE'
-                ) : null;
-
-                if (milestone) {
-                    handledItemIds.add(milestone.id);
-                }
-
-                const marker = createLayerBoundaryMarker(
-                    layer.depth_start_m,
-                    layer.vietnamese_name,
-                    layer.name,
-                    milestone
-                );
+                const marker = createLayerBoundaryMarker(layer);
                 trackEl.appendChild(marker);
             }
         });
@@ -64,12 +101,6 @@ export function initStage(layers, items) {
         (i) => i.depth_m === MAX_DEPTH_M && i.item_type === 'MILESTONE'
     ) : null;
 
-    if (challengerMilestone) {
-        handledItemIds.add(challengerMilestone.id);
-    }
-
-    // Khi có ExplorerItem loại MILESTONE được publish tại 10.928m, lấy dữ liệu từ database.
-    // Nếu chưa có dữ liệu trong DB, hiển thị placeholder thông báo nội dung đang được cập nhật.
     const challengerItem = challengerMilestone || {
         id: 'challenger-deep-endpoint',
         name: 'Challenger Deep',
@@ -92,90 +123,296 @@ export function initStage(layers, items) {
     );
     trackEl.appendChild(endPoint);
 
-    // 4. Bố trí các đối tượng thám hiểm (ExplorerItem) nếu có (loại trừ các item đã gộp vào marker)
-    if (items && items.length > 0) {
-        items.forEach((item) => {
-            if (!handledItemIds.has(item.id)) {
-                const itemNode = createExplorerItemNode(item);
-                trackEl.appendChild(itemNode);
-            }
+    // 4. Bố trí các đối tượng thám hiểm (ExplorerItem) có is_published=True
+    // Loại trừ item đã gán riêng cho mốc kết thúc Challenger Deep nếu có
+    const itemsToDisplay = items ? items.filter(
+        (item) => !(challengerMilestone && item.id === challengerMilestone.id)
+    ) : [];
+
+    if (itemsToDisplay.length > 0) {
+        const layoutResults = layoutExplorerItems(itemsToDisplay, isMobile);
+        layoutResults.forEach((layoutItem) => {
+            const cardNode = createExplorerCardNode(layoutItem);
+            trackEl.appendChild(cardNode);
         });
     }
 
-    // 5. Khởi tạo Intersection Observer để tối ưu hiển thị
+    // 5. Khởi tạo Intersection Observer để tối ưu hiển thị hiệu ứng
     setupIntersectionObserver();
 }
 
 /**
- * Tạo phần tử mốc ranh giới tầng
+ * Thuật toán phát hiện va chạm và phân bố thẻ sang các làn (trái, giữa, phải)
  */
-function createLayerBoundaryMarker(depthM, viName, enName, item = null) {
+function layoutExplorerItems(items, isMobile) {
+    if (!items || items.length === 0) return [];
+
+    // Sắp xếp items theo chiều tăng dần của depth_m
+    const sorted = [...items].sort((a, b) => a.depth_m - b.depth_m);
+
+    // Ước tính chiều cao trung bình của thẻ kèm khoảng đệm an toàn
+    const CARD_HEIGHT = isMobile ? 210 : 230;
+    const GAP = 24;
+
+    // Trên mobile: dồn vào 1 làn căn giữa để phù hợp màn hình nhỏ
+    if (isMobile) {
+        let lastBottomY = -Infinity;
+        return sorted.map((item) => {
+            const anchorY = item.depth_m * PIXELS_PER_METER;
+            const displayY = Math.max(anchorY, lastBottomY + GAP);
+            lastBottomY = displayY + CARD_HEIGHT;
+            return {
+                item,
+                lane: 1, // center
+                anchorY,
+                displayY,
+                hasOffset: Math.abs(displayY - anchorY) > 8,
+            };
+        });
+    }
+
+    // Trên Desktop: 3 làn song song (0: Trái, 1: Giữa, 2: Phải)
+    const laneBottoms = [-Infinity, -Infinity, -Infinity];
+
+    return sorted.map((item, idx) => {
+        const anchorY = item.depth_m * PIXELS_PER_METER;
+        const preferredLane = idx % 3;
+
+        let chosenLane = preferredLane;
+        let displayY = anchorY;
+
+        // Thử đặt vào làn ưu tiên nếu không bị va chạm
+        if (anchorY >= laneBottoms[preferredLane] + GAP) {
+            chosenLane = preferredLane;
+            displayY = anchorY;
+        } else {
+            // Thử 2 làn còn lại xem có làn nào trống tại đúng độ sâu anchorY không
+            const otherLane1 = (preferredLane + 1) % 3;
+            const otherLane2 = (preferredLane + 2) % 3;
+
+            if (anchorY >= laneBottoms[otherLane1] + GAP) {
+                chosenLane = otherLane1;
+                displayY = anchorY;
+            } else if (anchorY >= laneBottoms[otherLane2] + GAP) {
+                chosenLane = otherLane2;
+                displayY = anchorY;
+            } else {
+                // Cả 3 làn đều bị chiếm tại anchorY -> chọn làn kết thúc sớm nhất để hạ thẻ xuống
+                let minBottom = laneBottoms[0];
+                chosenLane = 0;
+                for (let l = 1; l < 3; l++) {
+                    if (laneBottoms[l] < minBottom) {
+                        minBottom = laneBottoms[l];
+                        chosenLane = l;
+                    }
+                }
+                displayY = minBottom + GAP;
+            }
+        }
+
+        laneBottoms[chosenLane] = displayY + CARD_HEIGHT;
+
+        return {
+            item,
+            lane: chosenLane,
+            anchorY,
+            displayY,
+            hasOffset: Math.abs(displayY - anchorY) > 8,
+        };
+    });
+}
+
+/**
+ * Tạo thẻ hình ảnh ExplorerCard và các mốc chỉ vị trí nếu bị dịch chuyển
+ */
+function createExplorerCardNode(layoutItem) {
+    const { item, lane, anchorY, displayY, hasOffset } = layoutItem;
+    const fragment = document.createDocumentFragment();
+
+    const laneClass = lane === 0 ? 'lane-left' : lane === 1 ? 'lane-center' : 'lane-right';
+
+    // 1. Khi thẻ bị dịch chuyển do va chạm với thẻ khác ở độ sâu gần nhau:
+    // Tạo mốc neo độ sâu thực tế (anchor pin) và đường nối (connector line)
+    if (hasOffset) {
+        const anchorEl = document.createElement('div');
+        anchorEl.className = `card-depth-anchor ${laneClass}`;
+        anchorEl.style.top = `${anchorY}px`;
+        anchorEl.innerHTML = `
+            <span class="anchor-pin-dot"></span>
+            <span class="anchor-pin-label">${numberFormatter.format(item.depth_m)} m</span>
+        `;
+        fragment.appendChild(anchorEl);
+
+        const lineEl = document.createElement('div');
+        lineEl.className = `card-connector-line ${laneClass}`;
+        lineEl.style.top = `${anchorY}px`;
+        lineEl.style.height = `${displayY - anchorY}px`;
+        fragment.appendChild(lineEl);
+    }
+
+    // 2. Thẻ hình ảnh đối tượng thám hiểm (Image Card)
+    const card = document.createElement('div');
+    card.className = `explorer-card ${laneClass}`;
+    card.id = `item-${item.slug}`;
+    card.style.top = `${displayY}px`;
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute(
+        'aria-label',
+        `Xem thông tin ${item.name} (${item.item_type === 'CREATURE' ? 'Sinh vật' : 'Cột mốc'}) ở độ sâu ${numberFormatter.format(item.depth_m)} mét`
+    );
+
+    const isCreature = item.item_type === 'CREATURE';
+    const typeLabel = isCreature ? 'Sinh vật' : 'Cột mốc';
+    const typeClass = isCreature ? 'type-creature' : 'type-milestone';
+
+    card.innerHTML = `
+        <div class="card-thumb-wrapper">
+            ${item.image_url ? `
+                <img class="card-thumb-img" src="${item.image_url}" alt="${item.name}" loading="lazy"
+                     onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                <div class="card-thumb-placeholder" style="display: none;">
+                    <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                    <span>${item.name}</span>
+                </div>
+            ` : `
+                <div class="card-thumb-placeholder">
+                    <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                    <span>${item.name}</span>
+                </div>
+            `}
+            <span class="card-type-tag ${typeClass}">${typeLabel}</span>
+        </div>
+        <div class="card-info">
+            <div class="card-header">
+                <h3 class="card-title">${item.name}</h3>
+                <span class="card-depth-badge">${numberFormatter.format(item.depth_m)} m</span>
+            </div>
+            ${item.scientific_name ? `<div class="card-scientific">${item.scientific_name}</div>` : ''}
+            ${item.short_description ? `<p class="card-desc">${item.short_description}</p>` : ''}
+            <div class="card-footer-hint">
+                <span>✦ Nhấp để mở chi tiết</span>
+                <span class="card-hint-arrow">→</span>
+            </div>
+        </div>
+    `;
+
+    // Click và bàn phím (Enter / Space) để mở Inspector
+    card.addEventListener('click', () => {
+        openInspector(item, card);
+    });
+
+    card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openInspector(item, card);
+        }
+    });
+
+    fragment.appendChild(card);
+    return fragment;
+}
+
+/**
+ * Tạo mốc bắt đầu hành trình tại 0m tương tác mở thông tin Tầng Nắng rọi (Epipelagic)
+ */
+function createStartPointMarker(layer0) {
+    const point = document.createElement('div');
+    point.className = 'journey-endpoint start-point is-interactive';
+    point.style.top = '90px';
+    point.tabIndex = 0;
+    point.setAttribute('role', 'button');
+    point.setAttribute(
+        'aria-label',
+        layer0
+            ? `Xem thông tin tầng ${layer0.vietnamese_name} (${layer0.name}) từ 0m đến ${layer0.depth_end_m}m`
+            : 'Xem thông tin Tầng Nắng rọi (Epipelagic)'
+    );
+
+    const title = layer0 ? `${layer0.vietnamese_name} (${layer0.name})` : 'Tầng Nắng rọi (Epipelagic)';
+    point.innerHTML = `
+        <h2>${title}</h2>
+        <p>0 m – Mặt biển • Bắt đầu hành trình thám hiểm xuống vùng biển sâu thẳm nhất hành tinh</p>
+        <div class="endpoint-action-hint">✦ Nhấp để xem thông tin tầng đại dương</div>
+    `;
+
+    const layerItem = layer0 ? createLayerInspectorItem(layer0) : null;
+    if (layerItem) {
+        point.addEventListener('click', () => {
+            openInspector(layerItem, point);
+        });
+
+        point.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openInspector(layerItem, point);
+            }
+        });
+    }
+
+    return point;
+}
+
+/**
+ * Tạo phần tử mốc ranh giới tầng đại dương (200m, 1.000m, 4.000m, 6.000m) tương tác mở Inspector
+ */
+function createLayerBoundaryMarker(layer) {
     const marker = document.createElement('div');
-    marker.className = 'layer-boundary-marker';
-    marker.style.top = `${depthM * PIXELS_PER_METER}px`;
+    marker.className = 'layer-boundary-marker is-interactive';
+    marker.style.top = `${layer.depth_start_m * PIXELS_PER_METER}px`;
+    marker.tabIndex = 0;
+    marker.setAttribute('role', 'button');
+    marker.setAttribute(
+        'aria-label',
+        `Xem thông tin tầng ${layer.vietnamese_name} (${layer.name}) từ ${numberFormatter.format(layer.depth_start_m)}m đến ${numberFormatter.format(layer.depth_end_m)}m`
+    );
 
     marker.innerHTML = `
         <div class="layer-boundary-line"></div>
         <div class="layer-boundary-badge">
-            <span class="layer-boundary-depth">${numberFormatter.format(depthM)} m</span>
-            <span class="layer-boundary-name">${viName} (${enName})</span>
+            <span class="layer-boundary-depth">${numberFormatter.format(layer.depth_start_m)} m</span>
+            <span class="layer-boundary-name">${layer.vietnamese_name} (${layer.name})</span>
+            <span class="layer-boundary-hint" aria-hidden="true">✦ Xem tầng</span>
         </div>
         <div class="layer-boundary-line"></div>
     `;
 
-    // Nếu có đối tượng cột mốc gắn với ranh giới này, kích hoạt khả năng mở Inspector
-    if (item) {
-        marker.classList.add('is-interactive');
-        marker.tabIndex = 0;
-        marker.setAttribute('role', 'button');
-        marker.setAttribute(
-            'aria-label',
-            `Xem chi tiết cột mốc ${item.name} ở độ sâu ${numberFormatter.format(depthM)} mét`
-        );
+    const layerItem = createLayerInspectorItem(layer);
+    marker.addEventListener('click', () => {
+        openInspector(layerItem, marker);
+    });
 
-        marker.addEventListener('click', () => {
-            openInspector(item, marker);
-        });
-
-        marker.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                openInspector(item, marker);
-            }
-        });
-    }
+    marker.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openInspector(layerItem, marker);
+        }
+    });
 
     return marker;
 }
 
 /**
- * Tạo phần tử mốc đầu/cuối hành trình
+ * Tạo phần tử mốc kết thúc hành trình Challenger Deep tại 10.928m
  */
 function createEndpointMarker(depthM, title, description, item = null) {
     const point = document.createElement('div');
-    point.className = 'journey-endpoint';
-    if (depthM === 0) {
-        point.classList.add('start-point');
-        point.style.top = '90px';
-    } else {
-        point.style.top = `${depthM * PIXELS_PER_METER}px`;
-    }
+    point.className = 'journey-endpoint is-interactive';
+    point.style.top = `${depthM * PIXELS_PER_METER}px`;
+    point.tabIndex = 0;
+    point.setAttribute('role', 'button');
+    point.setAttribute(
+        'aria-label',
+        `Xem chi tiết ${item ? item.name : 'Challenger Deep'} ở độ sâu ${numberFormatter.format(depthM)} mét`
+    );
 
     point.innerHTML = `
         <h2>${title}</h2>
         <p>${description}</p>
-        ${item ? '<div class="endpoint-action-hint" style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--hud-accent-cyan);">✦ Nhấp để xem thông tin chi tiết</div>' : ''}
+        <div class="endpoint-action-hint">✦ Nhấp để xem thông tin chi tiết</div>
     `;
 
     if (item) {
-        point.classList.add('is-interactive');
-        point.tabIndex = 0;
-        point.setAttribute('role', 'button');
-        point.setAttribute(
-            'aria-label',
-            `Xem chi tiết ${item.name} ở độ sâu ${numberFormatter.format(depthM)} mét`
-        );
-
         point.addEventListener('click', () => {
             openInspector(item, point);
         });
@@ -192,43 +429,7 @@ function createEndpointMarker(depthM, title, description, item = null) {
 }
 
 /**
- * Tạo phần tử hiển thị đối tượng thám hiểm
- */
-function createExplorerItemNode(item) {
-    const node = document.createElement('div');
-    node.className = 'explorer-item-node';
-    node.id = `item-${item.slug}`;
-    node.style.top = `${item.depth_m * PIXELS_PER_METER}px`;
-    node.tabIndex = 0;
-    node.setAttribute('role', 'button');
-    node.setAttribute('aria-label', `Xem thông tin ${item.name} ở độ sâu ${numberFormatter.format(item.depth_m)} mét`);
-
-    node.innerHTML = `
-        <div class="explorer-item-header">
-            <span class="explorer-item-name">${item.name}</span>
-            <span class="explorer-item-depth">${numberFormatter.format(item.depth_m)} m</span>
-        </div>
-        ${item.scientific_name ? `<div class="explorer-item-scientific">${item.scientific_name}</div>` : ''}
-        ${item.short_description ? `<p class="explorer-item-desc">${item.short_description}</p>` : ''}
-    `;
-
-    // Mở Inspector Drawer khi click hoặc ấn Enter/Space
-    node.addEventListener('click', () => {
-        openInspector(item, node);
-    });
-
-    node.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            openInspector(item, node);
-        }
-    });
-
-    return node;
-}
-
-/**
- * Sử dụng IntersectionObserver để chỉ kích hoạt animation khi đối tượng sắp vào viewport
+ * Sử dụng IntersectionObserver để tối ưu hiển thị hiệu ứng khi cuộn tới gần
  */
 function setupIntersectionObserver() {
     if (!('IntersectionObserver' in window)) return;
@@ -246,8 +447,9 @@ function setupIntersectionObserver() {
         threshold: 0.05,
     });
 
-    document.querySelectorAll('.explorer-item-node, .layer-boundary-marker, .journey-endpoint').forEach((el) => {
+    document.querySelectorAll('.explorer-card, .layer-boundary-marker, .journey-endpoint').forEach((el) => {
         observer.observe(el);
     });
 }
+
 

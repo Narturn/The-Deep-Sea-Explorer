@@ -304,6 +304,7 @@ Quản lý các thực thể xuất hiện trên hành trình:
 - `depth_m`: `PositiveIntegerField(db_index=True)` — Độ sâu tính bằng mét.
 - `layer`: `ForeignKey(OceanLayer, on_delete=models.PROTECT, related_name='items')`.
 - `short_description`: `CharField(max_length=255, blank=True)` — Mô tả ngắn hiển thị trên tooltip / tóm tắt.
+- `fact`: `TextField(blank=True)` — Nội dung thú vị hoặc giải thích khoa học chuyên sâu hiển thị trong Inspector Drawer.
 - **Thông tin hình ảnh bản quyền:**
   - `image_url`: `URLField(max_length=500, blank=True)` — Link ảnh trực tiếp.
   - `image_source_url`: `URLField(max_length=500, blank=True)` — Link trang nguồn ảnh.

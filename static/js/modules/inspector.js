@@ -95,6 +95,38 @@ function populateDrawerContent(item) {
     const licenseBoxEl = document.getElementById('inspector-license-box');
     const detailLinkEl = document.getElementById('inspector-detail-link');
 
+    // Trường hợp hiển thị thông tin tầng đại dương (OceanLayer)
+    if (item.item_type === 'LAYER') {
+        if (typeBadgeEl) typeBadgeEl.textContent = 'Tầng đại dương';
+        if (layerBadgeEl) layerBadgeEl.textContent = item.layer_badge || 'Phân tầng';
+        if (titleEl) titleEl.textContent = item.name;
+        if (scientificEl) {
+            scientificEl.textContent = item.scientific_name || '';
+            scientificEl.style.display = item.scientific_name ? 'block' : 'none';
+        }
+        if (depthValEl) {
+            depthValEl.textContent = item.depth_display || `${numberFormatter.format(item.depth_m)} m`;
+        }
+        if (descEl) {
+            descEl.textContent = item.short_description || 'Chưa có mô tả đặc điểm tầng.';
+        }
+        if (factEl) {
+            factEl.textContent = item.fact || 'Đang cập nhật đặc điểm chi tiết của tầng đại dương này.';
+            factEl.classList.remove('is-placeholder');
+        }
+        if (imageWrapperEl) {
+            imageWrapperEl.innerHTML = `
+                <div class="layer-inspector-preview" style="width: 100%; height: 100%; background: linear-gradient(135deg, ${item.color_start || '#0369a1'}, ${item.color_end || '#080b18'}); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: #ffffff; padding: 1.5rem; text-align: center;">
+                    <div style="font-size: 1.35rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">${item.name}</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.95rem; opacity: 0.95; background: rgba(0,0,0,0.45); padding: 0.25rem 0.75rem; border-radius: 9999px;">${item.depth_display || ''}</div>
+                </div>
+            `;
+        }
+        if (licenseBoxEl) licenseBoxEl.style.display = 'none';
+        if (detailLinkEl) detailLinkEl.style.display = 'none';
+        return;
+    }
+
     // Thể loại & Tầng biển
     if (typeBadgeEl) {
         typeBadgeEl.textContent = item.item_type === 'CREATURE' ? 'Sinh vật biển' : 'Cột mốc';

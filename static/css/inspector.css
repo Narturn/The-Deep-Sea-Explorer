@@ -157,6 +157,20 @@
     opacity: 0.4;
 }
 
+.layer-inspector-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    color: #ffffff;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4);
+}
+
 /* Tên và thông số chính */
 .inspector-title-group {
     display: flex;

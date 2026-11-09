@@ -94,6 +94,7 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
         parsed_layers = json.loads(layers_script_content)
         self.assertEqual(len(parsed_layers), 5)
         self.assertEqual(parsed_layers[0]['vietnamese_name'], 'Tầng Nắng rọi')
+        self.assertEqual(parsed_layers[0]['description'], 'Mô tả Tầng Nắng rọi')
 
         # Xác nhận các thành phần Frontend Core (Phase 5) hiện diện đầy đủ
         self.assertIn('class="depth-hud"', content)

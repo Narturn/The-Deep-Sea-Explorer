@@ -147,6 +147,18 @@
     transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.layer-boundary-hint {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--hud-accent-cyan);
+    opacity: 0.85;
+    margin-left: 0.35rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
 .layer-boundary-depth {
     font-family: var(--font-mono);
     font-weight: 700;
@@ -213,60 +225,302 @@
     line-height: 1.5;
 }
 
-/* Thẻ đối tượng thám hiểm (Explorer Items) */
-.explorer-item-node {
+/* Thẻ hình ảnh đối tượng thám hiểm (Explorer Cards) */
+.explorer-card {
     position: absolute;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%;
-    max-width: 440px;
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(56, 189, 248, 0.25);
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.25s ease,
+                box-shadow 0.25s ease;
     cursor: pointer;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    width: 29%;
+    max-width: 320px;
+    box-sizing: border-box;
 }
 
-.explorer-item-node:hover {
-    transform: translate(-50%, -52%);
+/* Phân bố 3 làn (Left, Center, Right) trên Desktop */
+.explorer-card.lane-left {
+    left: 3%;
+    right: auto;
+}
+
+.explorer-card.lane-center {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+}
+
+.explorer-card.lane-right {
+    left: auto;
+    right: 3%;
+}
+
+/* Hiệu ứng hover và focus bàn phím */
+.explorer-card.lane-left:hover,
+.explorer-card.lane-left:focus-visible,
+.explorer-card.lane-right:hover,
+.explorer-card.lane-right:focus-visible {
+    transform: translateY(-4px);
     border-color: var(--hud-accent-cyan);
-    box-shadow: 0 8px 28px rgba(56, 189, 248, 0.25);
+    box-shadow: 0 12px 32px rgba(56, 189, 248, 0.35);
+    outline: none;
+    z-index: 15;
 }
 
-.explorer-item-header {
+.explorer-card.lane-center:hover,
+.explorer-card.lane-center:focus-visible {
+    transform: translateX(-50%) translateY(-4px);
+    border-color: var(--hud-accent-cyan);
+    box-shadow: 0 12px 32px rgba(56, 189, 248, 0.35);
+    outline: none;
+    z-index: 15;
+}
+
+/* Khung hình ảnh thu nhỏ */
+.card-thumb-wrapper {
+    position: relative;
+    width: 100%;
+    height: 125px;
+    background: rgba(8, 15, 30, 0.95);
+    overflow: hidden;
+}
+
+.card-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+}
+
+.explorer-card:hover .card-thumb-img {
+    transform: scale(1.06);
+}
+
+.card-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    color: var(--hud-text-secondary);
+    background: radial-gradient(circle at center, rgba(56, 189, 248, 0.15), rgba(15, 23, 42, 0.95));
+}
+
+.card-thumb-placeholder svg {
+    width: 38px;
+    height: 38px;
+    fill: currentColor;
+    opacity: 0.5;
+}
+
+.card-thumb-placeholder span {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.card-type-tag {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.card-type-tag.type-creature {
+    background: rgba(56, 189, 248, 0.25);
+    border: 1px solid rgba(56, 189, 248, 0.5);
+    color: #38bdf8;
+}
+
+.card-type-tag.type-milestone {
+    background: rgba(245, 158, 11, 0.25);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    color: #fbbf24;
+}
+
+/* Phần thông tin thẻ */
+.card-info {
+    padding: 0.85rem 1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.card-header {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 0.35rem;
+    gap: 0.5rem;
 }
 
-.explorer-item-name {
+.card-title {
     font-size: 1.05rem;
     font-weight: 700;
     color: #ffffff;
+    margin: 0;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.explorer-item-depth {
+.card-depth-badge {
     font-family: var(--font-mono);
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--hud-accent-cyan);
+    white-space: nowrap;
 }
 
-.explorer-item-scientific {
+.card-scientific {
     font-size: 0.8rem;
     font-style: italic;
-    color: var(--hud-text-secondary);
-    margin-bottom: 0.5rem;
+    color: var(--hud-accent-cyan);
+    opacity: 0.85;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.explorer-item-desc {
-    font-size: 0.85rem;
+.card-desc {
+    font-size: 0.82rem;
     color: #cbd5e1;
     line-height: 1.45;
-    margin: 0;
+    margin: 0.15rem 0 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.card-footer-hint {
+    margin-top: 0.45rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.72rem;
+    color: var(--hud-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.card-hint-arrow {
+    color: var(--hud-accent-cyan);
+    transition: transform 0.2s ease;
+}
+
+.explorer-card:hover .card-hint-arrow {
+    transform: translateX(3px);
+}
+
+/* Điểm mốc neo độ sâu thực tế & Đường nối khi thẻ bị dịch chuyển */
+.card-depth-anchor {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    transform: translateY(-50%);
+    z-index: 5;
+    pointer-events: none;
+}
+
+.card-depth-anchor.lane-left {
+    left: 3%;
+}
+
+.card-depth-anchor.lane-center {
+    left: calc(50% - 60px);
+}
+
+.card-depth-anchor.lane-right {
+    right: 3%;
+    left: auto;
+}
+
+.anchor-pin-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--hud-accent-cyan);
+    box-shadow: 0 0 10px var(--hud-accent-cyan);
+}
+
+.anchor-pin-label {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--hud-accent-cyan);
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.card-connector-line {
+    position: absolute;
+    width: 2px;
+    border-left: 2px dashed rgba(56, 189, 248, 0.45);
+    z-index: 4;
+    pointer-events: none;
+}
+
+.card-connector-line.lane-left {
+    left: calc(3% + 4px);
+}
+
+.card-connector-line.lane-center {
+    left: 50%;
+}
+
+.card-connector-line.lane-right {
+    right: calc(3% + 4px);
+    left: auto;
+}
+
+/* Responsive trên màn hình di động */
+@media (max-width: 768px) {
+    .explorer-card {
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: 92% !important;
+        max-width: 380px !important;
+    }
+
+    .explorer-card:hover,
+    .explorer-card:focus-visible {
+        transform: translateX(-50%) translateY(-4px) !important;
+    }
+
+    .card-depth-anchor {
+        left: 4% !important;
+        right: auto !important;
+    }
+
+    .card-connector-line {
+        left: calc(4% + 4px) !important;
+        right: auto !important;
+    }
 }
 
