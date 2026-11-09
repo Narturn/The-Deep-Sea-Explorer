@@ -81,12 +81,16 @@ function renderStage(trackEl, layers, items, isMobile) {
     const trackHeight = MAX_DEPTH_M * PIXELS_PER_METER;
     trackEl.style.height = `${trackHeight}px`;
 
-    // 1. Tạo điểm khởi đầu tại 0m: Tầng Nắng rọi (Epipelagic)
+    // 1. Tạo mốc ranh giới 0m ngay dưới Fixed HUD (72px)
     const layer0 = layers && layers.length > 0 ? layers[0] : null;
+    const surfaceMarker = createSurfaceBoundaryMarker(layer0);
+    trackEl.appendChild(surfaceMarker);
+
+    // 2. Tạo ô giới thiệu Tầng Nắng rọi tại 0m (Epipelagic)
     const startPoint = createStartPointMarker(layer0);
     trackEl.appendChild(startPoint);
 
-    // 2. Tạo các mốc ranh giới tầng đại dương (200m, 1.000m, 4.000m, 6.000m)
+    // 3. Tạo các mốc ranh giới tầng đại dương (200m, 1.000m, 4.000m, 6.000m)
     if (layers && layers.length > 0) {
         layers.forEach((layer) => {
             if (layer.depth_start_m > 0) {
@@ -96,7 +100,7 @@ function renderStage(trackEl, layers, items, isMobile) {
         });
     }
 
-    // 3. Tạo điểm kết thúc tại Challenger Deep 10.928m
+    // 4. Tạo điểm kết thúc tại Challenger Deep 10.928m
     const challengerMilestone = items ? items.find(
         (i) => i.depth_m === MAX_DEPTH_M && i.item_type === 'MILESTONE'
     ) : null;
@@ -123,7 +127,7 @@ function renderStage(trackEl, layers, items, isMobile) {
     );
     trackEl.appendChild(endPoint);
 
-    // 4. Bố trí các đối tượng thám hiểm (ExplorerItem) có is_published=True
+    // 5. Bố trí các đối tượng thám hiểm (ExplorerItem) có is_published=True
     // Loại trừ item đã gán riêng cho mốc kết thúc Challenger Deep nếu có
     const itemsToDisplay = items ? items.filter(
         (item) => !(challengerMilestone && item.id === challengerMilestone.id)
@@ -137,14 +141,16 @@ function renderStage(trackEl, layers, items, isMobile) {
         });
     }
 
-    // 5. Khởi tạo Intersection Observer để tối ưu hiển thị hiệu ứng
+    // 6. Khởi tạo Intersection Observer để tối ưu hiển thị hiệu ứng
     setupIntersectionObserver();
 }
 
 /**
- * Thuật toán bố trí Explorer Cards tự động theo 3 làn (Trái, Giữa, Phải)
- * Tự động đo kích thước, phát hiện va chạm và dịch chuyển card khi gần nhau
- * Giữ anchor tại depth_m * 4px và không đè lên ô giới thiệu tầng hay Fixed HUD
+ * Thuật toán bố trí Explorer Cards và Nhãn độ sâu:
+ * - Giữ điểm neo thật tại chính xác depth_m * 4px.
+ * - Nhãn độ sâu tự động tránh Fixed HUD, tránh ô giới thiệu tầng, tránh đè lên card và nhãn khác.
+ * - Khi nhãn bị trùng hoặc vướng vật cản, tự động dịch chuyển và dùng đường nối về điểm neo thật.
+ * - Cards sắp xếp theo 3 làn, phát hiện va chạm tự động.
  */
 export function layoutExplorerItems(items, isMobile, layers = []) {
     if (!items || items.length === 0) return [];
@@ -156,8 +162,8 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
     const CARD_HEIGHT = isMobile ? 135 : 140;
     const CARD_GAP = 16;
 
-    // Khoảng đệm an toàn đỉnh: Tránh che ô giới thiệu Tầng Nắng rọi (90px + ~170px = ~260px) và Fixed HUD (72px)
-    const START_CLEARANCE_Y = 280;
+    // Khoảng đệm an toàn đỉnh: Tránh che ô giới thiệu Tầng Nắng rọi (130px + ~150px = ~280px)
+    const START_CLEARANCE_Y = 295;
 
     // Danh sách tọa độ Y của các mốc ranh giới tầng đại dương để tránh card làn giữa đè lên badge
     const boundaryPositions = (layers || [])
@@ -170,10 +176,12 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
         });
     };
 
-    // Trên mobile: Bố cục 1 cột căn giữa
+    // Bước 1: Tính toán vị trí displayY và lane cho từng Explorer Card
+    let rawLayoutItems = [];
+
     if (isMobile) {
         let lastBottom = START_CLEARANCE_Y;
-        return sorted.map((item) => {
+        rawLayoutItems = sorted.map((item) => {
             const anchorY = item.depth_m * PIXELS_PER_METER;
             let rawTargetY = Math.max(anchorY, START_CLEARANCE_Y);
 
@@ -189,7 +197,70 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
 
             return {
                 item,
-                lane: 1, // Làn giữa
+                lane: 1, // Làn giữa trên mobile
+                anchorY,
+                displayY,
+                hasOffset: Math.abs(displayY - anchorY) > 6,
+            };
+        });
+    } else {
+        // Trên desktop: 3 làn song song [0: Trái, 1: Giữa, 2: Phải]
+        const laneBottoms = [START_CLEARANCE_Y, START_CLEARANCE_Y, START_CLEARANCE_Y];
+
+        rawLayoutItems = sorted.map((item, idx) => {
+            const anchorY = item.depth_m * PIXELS_PER_METER;
+            const rawTargetY = Math.max(anchorY, START_CLEARANCE_Y);
+
+            // Với các vật thể gần mặt biển (< 70m), ưu tiên hai làn Trái và Phải để giữ khoảng giữa thoáng cho ô giới thiệu
+            const preferredLane = anchorY < START_CLEARANCE_Y
+                ? (idx % 2 === 0 ? 0 : 2)
+                : (idx % 3);
+
+            const laneCandidates = [preferredLane, (preferredLane + 1) % 3, (preferredLane + 2) % 3];
+
+            let chosenLane = preferredLane;
+            let displayY = rawTargetY;
+            let placed = false;
+
+            for (const lane of laneCandidates) {
+                if (lane === 1 && collidesWithBoundaryBadge(rawTargetY)) {
+                    continue;
+                }
+
+                if (rawTargetY >= laneBottoms[lane] + CARD_GAP) {
+                    chosenLane = lane;
+                    displayY = rawTargetY;
+                    placed = true;
+                    break;
+                }
+            }
+
+            if (!placed) {
+                let minBottom = Infinity;
+                chosenLane = 0;
+
+                for (const lane of laneCandidates) {
+                    let candidateY = laneBottoms[lane] + CARD_GAP;
+                    if (lane === 1 && collidesWithBoundaryBadge(candidateY)) {
+                        const nearB = boundaryPositions.find(
+                            (bY) => candidateY <= bY + 25 && candidateY + CARD_HEIGHT >= bY - 25
+                        );
+                        if (nearB) candidateY = nearB + 35;
+                    }
+
+                    if (candidateY < minBottom) {
+                        minBottom = candidateY;
+                        chosenLane = lane;
+                        displayY = candidateY;
+                    }
+                }
+            }
+
+            laneBottoms[chosenLane] = displayY + CARD_HEIGHT;
+
+            return {
+                item,
+                lane: chosenLane,
                 anchorY,
                 displayY,
                 hasOffset: Math.abs(displayY - anchorY) > 6,
@@ -197,65 +268,95 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
         });
     }
 
-    // Trên desktop: 3 làn song song [0: Trái, 1: Giữa, 2: Phải]
-    const laneBottoms = [START_CLEARANCE_Y, START_CLEARANCE_Y, START_CLEARANCE_Y];
+    // Bước 2: Tính toán vị trí nhãn độ sâu (labelY, labelLane) tránh va chạm HUD, ô giới thiệu, card và nhãn khác
+    // Theo dõi các khoảng [top, bottom] của nhãn đã được đặt trên từng làn
+    const placedLabelsByLane = { 0: [], 1: [], 2: [] };
+    const LABEL_HEIGHT = 24;
+    const LABEL_MIN_GAP = 6;
+    const MIN_HUD_CLEARANCE_Y = 96; // Tránh Fixed HUD (72px) và Surface Marker (74px)
 
-    return sorted.map((item, idx) => {
-        const anchorY = item.depth_m * PIXELS_PER_METER;
-        const rawTargetY = Math.max(anchorY, START_CLEARANCE_Y);
-        const preferredLane = idx % 3;
+    return rawLayoutItems.map((layoutItem) => {
+        const { item, lane, anchorY, displayY } = layoutItem;
 
-        // Ưu tiên làn theo thứ tự xoay vòng [preferred, (preferred+1)%3, (preferred+2)%3]
-        const laneCandidates = [preferredLane, (preferredLane + 1) % 3, (preferredLane + 2) % 3];
+        // Chọn làn cho nhãn:
+        // Nếu ở gần mặt biển (anchorY < 290px) và ở Desktop, nếu card ở lane 1 (giữa) thì nhãn chuyển sang lane 0 (trái)
+        // để tuyệt đối không đè lên ô giới thiệu tầng ở chính giữa
+        let labelLane = lane;
+        if (!isMobile && anchorY < 290 && lane === 1) {
+            labelLane = 0;
+        }
 
-        let chosenLane = preferredLane;
-        let displayY = rawTargetY;
-        let placed = false;
+        // Bắt đầu vị trí nhãn tại anchorY thực tế
+        let targetLabelY = anchorY;
 
-        for (const lane of laneCandidates) {
-            // Nếu là làn giữa, kiểm tra xem có va chạm với badge ranh giới tầng không
-            if (lane === 1 && collidesWithBoundaryBadge(rawTargetY)) {
-                continue;
+        // 1. Không để nhãn đè lên Fixed HUD và mốc 0m surface marker
+        if (targetLabelY < MIN_HUD_CLEARANCE_Y) {
+            targetLabelY = MIN_HUD_CLEARANCE_Y;
+        }
+
+        // 2. Không để nhãn đè lên ô giới thiệu tầng (Vùng Y từ 120px đến 285px)
+        if (isMobile) {
+            // Trên mobile, ô giới thiệu chiếm 90% chiều rộng ở giữa
+            if (targetLabelY >= 115 && targetLabelY <= 285) {
+                targetLabelY = 290;
             }
-
-            if (rawTargetY >= laneBottoms[lane] + CARD_GAP) {
-                chosenLane = lane;
-                displayY = rawTargetY;
-                placed = true;
-                break;
+        } else if (labelLane === 1) {
+            // Trên desktop, chỉ làn giữa mới trùng ô giới thiệu
+            if (targetLabelY >= 115 && targetLabelY <= 285) {
+                targetLabelY = 290;
             }
         }
 
-        // Nếu cả 3 làn đều bận tại rawTargetY -> chọn làn có vị trí trống sớm nhất
-        if (!placed) {
-            let minBottom = Infinity;
-            chosenLane = 0;
-
-            for (const lane of laneCandidates) {
-                let candidateY = laneBottoms[lane] + CARD_GAP;
-                if (lane === 1 && collidesWithBoundaryBadge(candidateY)) {
-                    const nearB = boundaryPositions.find(
-                        (bY) => candidateY <= bY + 25 && candidateY + CARD_HEIGHT >= bY - 25
-                    );
-                    if (nearB) candidateY = nearB + 35;
-                }
-
-                if (candidateY < minBottom) {
-                    minBottom = candidateY;
-                    chosenLane = lane;
-                    displayY = candidateY;
+        // 3. Không để nhãn đè lên các Explorer Card khác đã bố trí trong cùng làn
+        for (const other of rawLayoutItems) {
+            if (other.item.id !== item.id && other.lane === labelLane) {
+                const cardTop = other.displayY;
+                const cardBottom = other.displayY + CARD_HEIGHT;
+                // Nếu targetLabelY nằm trong card của item khác
+                if (targetLabelY >= cardTop - 10 && targetLabelY <= cardBottom + 10) {
+                    if (anchorY < cardTop) {
+                        targetLabelY = Math.max(MIN_HUD_CLEARANCE_Y, cardTop - 14);
+                    } else {
+                        targetLabelY = cardBottom + 14;
+                    }
                 }
             }
         }
 
-        laneBottoms[chosenLane] = displayY + CARD_HEIGHT;
+        // 4. Tránh trùng với các nhãn độ sâu khác đã đặt trong cùng làn
+        const lanePlaced = placedLabelsByLane[labelLane] || [];
+        let resolved = false;
+        let attempts = 0;
+
+        while (!resolved && attempts < 20) {
+            attempts++;
+            const myTop = targetLabelY - LABEL_HEIGHT / 2;
+            const myBottom = targetLabelY + LABEL_HEIGHT / 2;
+
+            const collision = lanePlaced.find((p) => {
+                return myTop <= p.bottom + LABEL_MIN_GAP && myBottom >= p.top - LABEL_MIN_GAP;
+            });
+
+            if (collision) {
+                targetLabelY = collision.bottom + LABEL_MIN_GAP + LABEL_HEIGHT / 2;
+            } else {
+                resolved = true;
+            }
+        }
+
+        // Lưu vùng nhãn đã đặt vào danh sách theo làn
+        const finalTop = targetLabelY - LABEL_HEIGHT / 2;
+        const finalBottom = targetLabelY + LABEL_HEIGHT / 2;
+        placedLabelsByLane[labelLane].push({ top: finalTop, bottom: finalBottom });
+
+        // Cập nhật hasOffset nếu card bị dịch chuyển HOẶC nhãn bị dịch chuyển khỏi anchor
+        const hasOffset = Math.abs(displayY - anchorY) > 6 || Math.abs(targetLabelY - anchorY) > 6;
 
         return {
-            item,
-            lane: chosenLane,
-            anchorY,
-            displayY,
-            hasOffset: Math.abs(displayY - anchorY) > 6,
+            ...layoutItem,
+            labelLane,
+            labelY: targetLabelY,
+            hasOffset,
         };
     });
 }
@@ -264,25 +365,35 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
  * Tạo thẻ hình ảnh ExplorerCard riêng biệt, gọn gàng cho từng đối tượng
  */
 function createExplorerCardNode(layoutItem) {
-    const { item, lane, anchorY, displayY, hasOffset } = layoutItem;
+    const { item, lane, labelLane, anchorY, labelY, displayY, hasOffset } = layoutItem;
     const fragment = document.createDocumentFragment();
     const laneClass = lane === 0 ? 'lane-left' : lane === 1 ? 'lane-center' : 'lane-right';
+    const labelLaneClass = labelLane === 0 ? 'lane-left' : labelLane === 1 ? 'lane-center' : 'lane-right';
 
-    // 1. Mốc neo độ sâu thực tế & Đường nối khi card được dịch chuyển khỏi điểm neo
+    // 1. Mốc neo độ sâu thực tế & Nhãn độ sâu & Đường nối khi card hoặc nhãn bị dịch chuyển
     if (hasOffset) {
-        const anchorEl = document.createElement('div');
-        anchorEl.className = `card-depth-anchor ${laneClass}`;
-        anchorEl.style.top = `${anchorY}px`;
-        anchorEl.innerHTML = `
-            <span class="anchor-pin-dot"></span>
+        // Điểm neo thực tế giữ chính xác tại anchorY = depth_m * 4px
+        const pinEl = document.createElement('div');
+        pinEl.className = `card-depth-pin ${labelLaneClass}`;
+        pinEl.style.top = `${anchorY}px`;
+        pinEl.innerHTML = `<span class="anchor-pin-dot" title="Tọa độ thực tế: ${numberFormatter.format(item.depth_m)} m"></span>`;
+        fragment.appendChild(pinEl);
+
+        // Nhãn độ sâu hiển thị tại labelY (được thuật toán dịch chuyển để tránh HUD, ô giới thiệu, card và nhãn khác)
+        const labelEl = document.createElement('div');
+        labelEl.className = `card-depth-anchor ${labelLaneClass}`;
+        labelEl.style.top = `${labelY}px`;
+        labelEl.innerHTML = `
             <span class="anchor-pin-label">${numberFormatter.format(item.depth_m)} m</span>
         `;
-        fragment.appendChild(anchorEl);
+        fragment.appendChild(labelEl);
 
+        // Đường nối liên tục từ điểm neo thực tế qua nhãn đến card
         const lineEl = document.createElement('div');
-        lineEl.className = `card-connector-line ${laneClass}`;
-        const topY = Math.min(anchorY, displayY);
-        const heightY = Math.abs(displayY - anchorY);
+        lineEl.className = `card-connector-line ${labelLaneClass}`;
+        const topY = Math.min(anchorY, labelY, displayY);
+        const bottomY = Math.max(anchorY, labelY, displayY);
+        const heightY = bottomY - topY;
         lineEl.style.top = `${topY}px`;
         lineEl.style.height = `${heightY}px`;
         fragment.appendChild(lineEl);
@@ -345,12 +456,56 @@ function createExplorerCardNode(layoutItem) {
 }
 
 /**
- * Tạo mốc bắt đầu hành trình tại 0m tương tác mở thông tin Tầng Nắng rọi (Epipelagic)
+ * Tạo mốc ranh giới 0m (Surface Boundary Marker) ngay dưới mép dưới Fixed HUD (72px)
+ */
+function createSurfaceBoundaryMarker(layer0) {
+    const marker = document.createElement('div');
+    marker.className = 'layer-boundary-marker surface-marker is-interactive';
+    marker.style.top = '74px'; // Ngay bên dưới Fixed HUD 72px
+    marker.tabIndex = 0;
+    marker.setAttribute('role', 'button');
+    marker.setAttribute(
+        'aria-label',
+        layer0
+            ? `Xem thông tin tầng ${layer0.vietnamese_name} (${layer0.name}) từ 0 m`
+            : 'Xem thông tin mốc 0 m Tầng Nắng rọi'
+    );
+
+    const layerName = layer0 ? `${layer0.vietnamese_name} (${layer0.name})` : 'Tầng Nắng rọi (Epipelagic)';
+    marker.innerHTML = `
+        <div class="layer-boundary-line"></div>
+        <div class="layer-boundary-badge">
+            <span class="layer-boundary-depth">0 m</span>
+            <span class="layer-boundary-name">${layerName}</span>
+            <span class="layer-boundary-hint" aria-hidden="true">✦ Xem tầng</span>
+        </div>
+        <div class="layer-boundary-line"></div>
+    `;
+
+    const layerItem = layer0 ? createLayerInspectorItem(layer0) : null;
+    if (layerItem) {
+        marker.addEventListener('click', () => {
+            openInspector(layerItem, marker);
+        });
+
+        marker.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openInspector(layerItem, marker);
+            }
+        });
+    }
+
+    return marker;
+}
+
+/**
+ * Tạo ô giới thiệu tầng khởi đầu tại 0m tương tác mở thông tin Tầng Nắng rọi (Epipelagic)
  */
 function createStartPointMarker(layer0) {
     const point = document.createElement('div');
     point.className = 'journey-endpoint start-point is-interactive';
-    point.style.top = '90px';
+    point.style.top = '130px';
     point.tabIndex = 0;
     point.setAttribute('role', 'button');
     point.setAttribute(

@@ -99,6 +99,28 @@
     /* Chiều cao track được tính toán động bởi scroll_engine.js */
 }
 
+/* 2. Thanh dọc độ sâu (Vertical Depth Spine) chạy xuyên suốt hành trình */
+.vertical-track::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    background: linear-gradient(
+        180deg,
+        rgba(56, 189, 248, 0.45) 0%,
+        rgba(56, 189, 248, 0.3) 800px,
+        rgba(14, 165, 233, 0.25) 4000px,
+        rgba(6, 78, 137, 0.25) 16000px,
+        rgba(45, 212, 191, 0.3) 43712px
+    );
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.2);
+    z-index: var(--z-depth-spine);
+    pointer-events: none;
+}
+
 /* Mốc ranh giới các tầng biển (Layer Boundary Markers) */
 .layer-boundary-marker {
     position: absolute;
@@ -109,6 +131,13 @@
     gap: 1rem;
     pointer-events: none;
     transform: translateY(-50%);
+    z-index: var(--z-depth-label);
+}
+
+.layer-boundary-marker.surface-marker {
+    top: 74px;
+    transform: none;
+    z-index: var(--z-depth-label);
 }
 
 .layer-boundary-marker.is-interactive {
@@ -183,11 +212,13 @@
     width: 90%;
     max-width: 500px;
     padding: 2rem;
-    background: rgba(6, 13, 26, 0.85);
+    background: #060d1a; /* Đặt phía trước thanh dọc và che khuất hoàn toàn thanh dọc */
     border: 1px solid rgba(56, 189, 248, 0.3);
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: var(--z-layer-intro);
     transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -239,7 +270,7 @@
                 border-color 0.2s ease,
                 box-shadow 0.2s ease;
     cursor: pointer;
-    z-index: 10;
+    z-index: var(--z-card);
     display: flex;
     flex-direction: column;
     width: 27%;
@@ -273,7 +304,7 @@
     border-color: var(--hud-accent-cyan);
     box-shadow: 0 10px 28px rgba(56, 189, 248, 0.35);
     outline: none;
-    z-index: 15;
+    z-index: var(--z-card);
 }
 
 .explorer-card.lane-center:hover,
@@ -282,7 +313,7 @@
     border-color: var(--hud-accent-cyan);
     box-shadow: 0 10px 28px rgba(56, 189, 248, 0.35);
     outline: none;
-    z-index: 15;
+    z-index: var(--z-card);
 }
 
 /* Khung hình ảnh thu nhỏ gọn gàng */
@@ -393,14 +424,48 @@
     white-space: nowrap;
 }
 
-/* Điểm mốc neo độ sâu thực tế & Đường nối khi thẻ bị dịch chuyển */
+/* Điểm mốc neo độ sâu thực tế & Nhãn độ sâu & Đường nối */
+.card-depth-pin {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-50%);
+    z-index: var(--z-connector); /* Layer 3: Điểm neo và đường nối */
+    pointer-events: none;
+    width: 14px;
+    height: 14px;
+}
+
+.card-depth-pin.lane-left {
+    left: calc(3% - 6px);
+}
+
+.card-depth-pin.lane-center {
+    left: calc(50% - 7px);
+}
+
+.card-depth-pin.lane-right {
+    right: calc(3% - 6px);
+    left: auto;
+}
+
+.anchor-pin-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--hud-accent-cyan);
+    box-shadow: 0 0 10px var(--hud-accent-cyan), 0 0 4px #ffffff;
+}
+
+/* Nhãn độ sâu */
 .card-depth-anchor {
     position: absolute;
     display: flex;
     align-items: center;
     gap: 0.45rem;
     transform: translateY(-50%);
-    z-index: 5;
+    z-index: var(--z-depth-label); /* Layer 4: Nhãn độ sâu */
     pointer-events: none;
 }
 
@@ -409,7 +474,8 @@
 }
 
 .card-depth-anchor.lane-center {
-    left: calc(50% - 60px);
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .card-depth-anchor.lane-right {
@@ -417,44 +483,39 @@
     left: auto;
 }
 
-.anchor-pin-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--hud-accent-cyan);
-    box-shadow: 0 0 10px var(--hud-accent-cyan);
-}
-
 .anchor-pin-label {
     font-family: var(--font-mono);
     font-size: 0.74rem;
     font-weight: 700;
     color: var(--hud-accent-cyan);
-    background: rgba(15, 23, 42, 0.9);
-    border: 1px solid rgba(56, 189, 248, 0.4);
-    padding: 0.1rem 0.4rem;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    padding: 0.12rem 0.45rem;
     border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+    white-space: nowrap;
 }
 
+/* Đường nối (Leader / Connector Line) */
 .card-connector-line {
     position: absolute;
     width: 2px;
     border-left: 2px dashed rgba(56, 189, 248, 0.45);
-    z-index: 4;
+    z-index: var(--z-connector); /* Layer 3: Điểm neo và đường nối */
     pointer-events: none;
 }
 
 .card-connector-line.lane-left {
-    left: calc(3% + 4px);
+    left: calc(3% + 1px);
 }
 
 .card-connector-line.lane-center {
     left: 50%;
+    transform: translateX(-50%);
 }
 
 .card-connector-line.lane-right {
-    right: calc(3% + 4px);
+    right: calc(3% + 1px);
     left: auto;
 }
 
@@ -473,14 +534,21 @@
         transform: translateX(-50%) translateY(-3px) !important;
     }
 
-    .card-depth-anchor {
-        left: 4% !important;
+    .card-depth-pin {
+        left: calc(4% - 6px) !important;
         right: auto !important;
     }
 
-    .card-connector-line {
-        left: calc(4% + 4px) !important;
+    .card-depth-anchor {
+        left: 4% !important;
         right: auto !important;
+        transform: translateY(-50%) !important;
+    }
+
+    .card-connector-line {
+        left: calc(4% + 1px) !important;
+        right: auto !important;
+        transform: none !important;
     }
 }
 

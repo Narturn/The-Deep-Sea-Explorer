@@ -38,8 +38,13 @@
 
     /* Z-Index Architecture */
     --z-bg: 1;
-    --z-particles: 2;
-    --z-spotlight: 3;
+    --z-particles: 1;
+    --z-spotlight: 1;
+    --z-depth-spine: 2;
+    --z-connector: 3;
+    --z-depth-label: 4;
+    --z-card: 5;
+    --z-layer-intro: 6;
     --z-stage-content: 10;
     --z-hud: 50;
     --z-modal: 100;
