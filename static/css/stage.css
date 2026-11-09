@@ -99,24 +99,16 @@
     /* Chiều cao track được tính toán động bởi scroll_engine.js */
 }
 
-/* 2. Thanh dọc độ sâu (Vertical Depth Spine) chạy xuyên suốt hành trình */
+/* 2. Thanh dọc độ cao / độ sâu nét đứt chạy thẳng từ trên xuống xuyên suốt hành trình */
 .vertical-track::before {
     content: '';
     position: absolute;
-    top: 0;
+    top: 74px;
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
     width: 2px;
-    background: linear-gradient(
-        180deg,
-        rgba(56, 189, 248, 0.45) 0%,
-        rgba(56, 189, 248, 0.3) 800px,
-        rgba(14, 165, 233, 0.25) 4000px,
-        rgba(6, 78, 137, 0.25) 16000px,
-        rgba(45, 212, 191, 0.3) 43712px
-    );
-    box-shadow: 0 0 6px rgba(56, 189, 248, 0.2);
+    border-left: 2px dashed rgba(56, 189, 248, 0.4);
     z-index: var(--z-depth-spine);
     pointer-events: none;
 }
@@ -232,15 +224,6 @@
     box-shadow: 0 0 28px rgba(56, 189, 248, 0.45);
     transform: translate(-50%, -52%);
     outline: none;
-}
-
-.journey-endpoint.start-point {
-    transform: translate(-50%, 0);
-}
-
-.journey-endpoint.start-point.is-interactive:hover,
-.journey-endpoint.start-point.is-interactive:focus-visible {
-    transform: translate(-50%, -4px);
 }
 
 .journey-endpoint h2 {

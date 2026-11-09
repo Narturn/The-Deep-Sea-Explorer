@@ -86,11 +86,7 @@ function renderStage(trackEl, layers, items, isMobile) {
     const surfaceMarker = createSurfaceBoundaryMarker(layer0);
     trackEl.appendChild(surfaceMarker);
 
-    // 2. Tạo ô giới thiệu Tầng Nắng rọi tại 0m (Epipelagic)
-    const startPoint = createStartPointMarker(layer0);
-    trackEl.appendChild(startPoint);
-
-    // 3. Tạo các mốc ranh giới tầng đại dương (200m, 1.000m, 4.000m, 6.000m)
+    // 2. Tạo các mốc ranh giới tầng đại dương (200m, 1.000m, 4.000m, 6.000m)
     if (layers && layers.length > 0) {
         layers.forEach((layer) => {
             if (layer.depth_start_m > 0) {
@@ -100,7 +96,7 @@ function renderStage(trackEl, layers, items, isMobile) {
         });
     }
 
-    // 4. Tạo điểm kết thúc tại Challenger Deep 10.928m
+    // 3. Tạo điểm kết thúc tại Challenger Deep 10.928m
     const challengerMilestone = items ? items.find(
         (i) => i.depth_m === MAX_DEPTH_M && i.item_type === 'MILESTONE'
     ) : null;
@@ -162,8 +158,8 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
     const CARD_HEIGHT = isMobile ? 135 : 140;
     const CARD_GAP = 16;
 
-    // Khoảng đệm an toàn đỉnh: Tránh che ô giới thiệu Tầng Nắng rọi (130px + ~150px = ~280px)
-    const START_CLEARANCE_Y = 295;
+    // Khoảng đệm an toàn đỉnh ngay dưới mốc 0m (Surface Marker 74px + ~36px)
+    const START_CLEARANCE_Y = 110;
 
     // Danh sách tọa độ Y của các mốc ranh giới tầng đại dương để tránh card làn giữa đè lên badge
     const boundaryPositions = (layers || [])
@@ -210,11 +206,7 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
         rawLayoutItems = sorted.map((item, idx) => {
             const anchorY = item.depth_m * PIXELS_PER_METER;
             const rawTargetY = Math.max(anchorY, START_CLEARANCE_Y);
-
-            // Với các vật thể gần mặt biển (< 70m), ưu tiên hai làn Trái và Phải để giữ khoảng giữa thoáng cho ô giới thiệu
-            const preferredLane = anchorY < START_CLEARANCE_Y
-                ? (idx % 2 === 0 ? 0 : 2)
-                : (idx % 3);
+            const preferredLane = idx % 3;
 
             const laneCandidates = [preferredLane, (preferredLane + 1) % 3, (preferredLane + 2) % 3];
 
@@ -268,7 +260,7 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
         });
     }
 
-    // Bước 2: Tính toán vị trí nhãn độ sâu (labelY, labelLane) tránh va chạm HUD, ô giới thiệu, card và nhãn khác
+    // Bước 2: Tính toán vị trí nhãn độ sâu (labelY, labelLane) tránh va chạm HUD, card và nhãn khác
     // Theo dõi các khoảng [top, bottom] của nhãn đã được đặt trên từng làn
     const placedLabelsByLane = { 0: [], 1: [], 2: [] };
     const LABEL_HEIGHT = 24;
@@ -277,14 +269,7 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
 
     return rawLayoutItems.map((layoutItem) => {
         const { item, lane, anchorY, displayY } = layoutItem;
-
-        // Chọn làn cho nhãn:
-        // Nếu ở gần mặt biển (anchorY < 290px) và ở Desktop, nếu card ở lane 1 (giữa) thì nhãn chuyển sang lane 0 (trái)
-        // để tuyệt đối không đè lên ô giới thiệu tầng ở chính giữa
-        let labelLane = lane;
-        if (!isMobile && anchorY < 290 && lane === 1) {
-            labelLane = 0;
-        }
+        const labelLane = lane;
 
         // Bắt đầu vị trí nhãn tại anchorY thực tế
         let targetLabelY = anchorY;
@@ -294,20 +279,7 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
             targetLabelY = MIN_HUD_CLEARANCE_Y;
         }
 
-        // 2. Không để nhãn đè lên ô giới thiệu tầng (Vùng Y từ 120px đến 285px)
-        if (isMobile) {
-            // Trên mobile, ô giới thiệu chiếm 90% chiều rộng ở giữa
-            if (targetLabelY >= 115 && targetLabelY <= 285) {
-                targetLabelY = 290;
-            }
-        } else if (labelLane === 1) {
-            // Trên desktop, chỉ làn giữa mới trùng ô giới thiệu
-            if (targetLabelY >= 115 && targetLabelY <= 285) {
-                targetLabelY = 290;
-            }
-        }
-
-        // 3. Không để nhãn đè lên các Explorer Card khác đã bố trí trong cùng làn
+        // 2. Không để nhãn đè lên các Explorer Card khác đã bố trí trong cùng làn
         for (const other of rawLayoutItems) {
             if (other.item.id !== item.id && other.lane === labelLane) {
                 const cardTop = other.displayY;
@@ -323,7 +295,7 @@ export function layoutExplorerItems(items, isMobile, layers = []) {
             }
         }
 
-        // 4. Tránh trùng với các nhãn độ sâu khác đã đặt trong cùng làn
+        // 3. Tránh trùng với các nhãn độ sâu khác đã đặt trong cùng làn
         const lanePlaced = placedLabelsByLane[labelLane] || [];
         let resolved = false;
         let attempts = 0;
@@ -497,46 +469,6 @@ function createSurfaceBoundaryMarker(layer0) {
     }
 
     return marker;
-}
-
-/**
- * Tạo ô giới thiệu tầng khởi đầu tại 0m tương tác mở thông tin Tầng Nắng rọi (Epipelagic)
- */
-function createStartPointMarker(layer0) {
-    const point = document.createElement('div');
-    point.className = 'journey-endpoint start-point is-interactive';
-    point.style.top = '130px';
-    point.tabIndex = 0;
-    point.setAttribute('role', 'button');
-    point.setAttribute(
-        'aria-label',
-        layer0
-            ? `Xem thông tin tầng ${layer0.vietnamese_name} (${layer0.name}) từ 0m đến ${layer0.depth_end_m}m`
-            : 'Xem thông tin Tầng Nắng rọi (Epipelagic)'
-    );
-
-    const title = layer0 ? `${layer0.vietnamese_name} (${layer0.name})` : 'Tầng Nắng rọi (Epipelagic)';
-    point.innerHTML = `
-        <h2>${title}</h2>
-        <p>0 m – Mặt biển • Bắt đầu hành trình thám hiểm xuống vùng biển sâu thẳm nhất hành tinh</p>
-        <div class="endpoint-action-hint">✦ Nhấp để xem thông tin tầng đại dương</div>
-    `;
-
-    const layerItem = layer0 ? createLayerInspectorItem(layer0) : null;
-    if (layerItem) {
-        point.addEventListener('click', () => {
-            openInspector(layerItem, point);
-        });
-
-        point.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                openInspector(layerItem, point);
-            }
-        });
-    }
-
-    return point;
 }
 
 /**
