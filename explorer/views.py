@@ -43,7 +43,11 @@ class IndexView(TemplateView):
                 'layer_id': item.layer_id,
                 'layer_name': item.layer.vietnamese_name,
                 'short_description': item.short_description,
+                'fact': item.fact,
                 'image_url': item.image_url,
+                'image_source_url': item.image_source_url,
+                'image_credit': item.image_credit,
+                'image_license': item.image_license,
                 'detail_url': item.detail_url,
                 'is_verified': item.is_verified,
             }

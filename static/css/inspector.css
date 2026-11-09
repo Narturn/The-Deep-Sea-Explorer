@@ -212,6 +212,53 @@
     margin: 0;
 }
 
+/* Khối thông tin mở rộng / Sự thật thú vị & Khoa học */
+.inspector-fact-container {
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.75), rgba(8, 47, 73, 0.3));
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 8px;
+    padding: 1rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.inspector-fact-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--hud-accent-cyan);
+}
+
+.inspector-fact-icon {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.inspector-fact-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.inspector-fact-text {
+    font-size: 0.92rem;
+    color: #e2e8f0;
+    line-height: 1.65;
+    margin: 0;
+    white-space: pre-line;
+}
+
+.inspector-fact-text.is-placeholder {
+    color: var(--hud-text-secondary);
+    font-style: italic;
+    opacity: 0.85;
+}
+
 /* Thông tin bản quyền ảnh */
 .inspector-license-box {
     margin-top: auto;

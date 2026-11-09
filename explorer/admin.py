@@ -75,11 +75,12 @@ class ExplorerItemAdmin(admin.ModelAdmin):
     )
     list_display_links = ("name",)
     list_filter = ("item_type", "layer", "is_verified", "is_published")
-    search_fields = ("name", "scientific_name", "short_description")
+    search_fields = ("name", "scientific_name", "short_description", "fact")
     ordering = ("depth_m", "name")
     prepopulated_fields = {"slug": ("name",)}
     filter_horizontal = ("references",)
-    list_editable = ("is_published",)
+    list_editable = ("is_published", "is_verified")
+    save_on_top = True
 
     fieldsets = (
         (
@@ -89,8 +90,17 @@ class ExplorerItemAdmin(admin.ModelAdmin):
                     ("name", "slug"),
                     ("item_type", "scientific_name"),
                     ("depth_m", "layer"),
-                    "short_description",
                 ),
+            },
+        ),
+        (
+            "Nội dung & Giải thích khoa học",
+            {
+                "fields": (
+                    "short_description",
+                    "fact",
+                ),
+                "description": "Mô tả ngắn dùng cho tooltip / thẻ tóm tắt. Fact dùng cho giải thích khoa học chuyên sâu hoặc sự thật thú vị trong Inspector Drawer.",
             },
         ),
         (

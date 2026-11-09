@@ -90,6 +90,7 @@ function populateDrawerContent(item) {
     const scientificEl = document.getElementById('inspector-scientific');
     const depthValEl = document.getElementById('inspector-depth-val');
     const descEl = document.getElementById('inspector-description');
+    const factEl = document.getElementById('inspector-fact');
     const imageWrapperEl = document.getElementById('inspector-image-wrapper');
     const licenseBoxEl = document.getElementById('inspector-license-box');
     const detailLinkEl = document.getElementById('inspector-detail-link');
@@ -120,7 +121,18 @@ function populateDrawerContent(item) {
 
     // Mô tả ngắn
     if (descEl) {
-        descEl.textContent = item.short_description || 'Chưa có mô tả chi tiết cho đối tượng này.';
+        descEl.textContent = item.short_description || 'Nội dung thông tin đang được cập nhật.';
+    }
+
+    // Sự thật thú vị & Thông tin khoa học mở rộng
+    if (factEl) {
+        if (item.fact && item.fact.trim()) {
+            factEl.textContent = item.fact;
+            factEl.classList.remove('is-placeholder');
+        } else {
+            factEl.textContent = 'Nội dung giải thích khoa học đang được cập nhật.';
+            factEl.classList.add('is-placeholder');
+        }
     }
 
     // Hình ảnh minh họa

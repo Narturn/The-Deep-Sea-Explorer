@@ -111,6 +111,22 @@
     transform: translateY(-50%);
 }
 
+.layer-boundary-marker.is-interactive {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.layer-boundary-marker.is-interactive:focus-visible {
+    outline: none;
+}
+
+.layer-boundary-marker.is-interactive:hover .layer-boundary-badge,
+.layer-boundary-marker.is-interactive:focus-visible .layer-boundary-badge {
+    border-color: var(--hud-accent-cyan);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.45);
+    transform: scale(1.05);
+}
+
 .layer-boundary-line {
     flex: 1;
     height: 1px;
@@ -128,6 +144,7 @@
     border-radius: 9999px;
     backdrop-filter: blur(8px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .layer-boundary-depth {
@@ -159,10 +176,28 @@
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(12px);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.journey-endpoint.is-interactive {
+    cursor: pointer;
+}
+
+.journey-endpoint.is-interactive:hover,
+.journey-endpoint.is-interactive:focus-visible {
+    border-color: var(--hud-accent-cyan);
+    box-shadow: 0 0 28px rgba(56, 189, 248, 0.45);
+    transform: translate(-50%, -52%);
+    outline: none;
 }
 
 .journey-endpoint.start-point {
     transform: translate(-50%, 0);
+}
+
+.journey-endpoint.start-point.is-interactive:hover,
+.journey-endpoint.start-point.is-interactive:focus-visible {
+    transform: translate(-50%, -4px);
 }
 
 .journey-endpoint h2 {

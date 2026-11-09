@@ -130,6 +130,11 @@ class ExplorerItem(models.Model):
         verbose_name="Mô tả ngắn",
         help_text="Hiển thị trên tooltip và thẻ tóm tắt",
     )
+    fact = models.TextField(
+        blank=True,
+        verbose_name="Sự thật thú vị / Giải thích khoa học",
+        help_text="Nội dung thú vị hoặc giải thích khoa học chuyên sâu",
+    )
 
     # Quản lý hình ảnh và bản quyền
     image_url = models.URLField(max_length=500, blank=True, verbose_name="URL hình ảnh trực tiếp")

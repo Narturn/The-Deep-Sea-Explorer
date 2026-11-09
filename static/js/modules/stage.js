@@ -18,12 +18,20 @@ export function initStage(layers, items) {
     const trackHeight = MAX_DEPTH_M * PIXELS_PER_METER;
     trackEl.style.height = `${trackHeight}px`;
 
+    // Tập hợp ID các item đã được gắn trực tiếp vào marker để tránh render card trùng lặp
+    const handledItemIds = new Set();
+
     // 1. Tạo điểm khởi đầu tại 0m: Tầng Nắng rọi (Epipelagic)
     const layer0 = layers && layers.length > 0 ? layers[0] : null;
+    const startMilestone = items ? items.find((i) => i.depth_m === 0 && i.item_type === 'MILESTONE') : null;
+    if (startMilestone) {
+        handledItemIds.add(startMilestone.id);
+    }
     const startPoint = createEndpointMarker(
         0,
         layer0 ? `${layer0.vietnamese_name} (${layer0.name})` : 'Tầng Nắng rọi (Epipelagic)',
-        '0 m – Mặt biển • Bắt đầu hành trình thám hiểm xuống vùng biển sâu thẳm nhất hành tinh'
+        '0 m – Mặt biển • Bắt đầu hành trình thám hiểm xuống vùng biển sâu thẳm nhất hành tinh',
+        startMilestone
     );
     trackEl.appendChild(startPoint);
 
@@ -32,25 +40,65 @@ export function initStage(layers, items) {
         layers.forEach((layer) => {
             // Đặt marker ranh giới tại mốc bắt đầu của các tầng (từ 200m trở đi)
             if (layer.depth_start_m > 0) {
-                const marker = createLayerBoundaryMarker(layer.depth_start_m, layer.vietnamese_name, layer.name);
+                const milestone = items ? items.find(
+                    (i) => i.depth_m === layer.depth_start_m && i.item_type === 'MILESTONE'
+                ) : null;
+
+                if (milestone) {
+                    handledItemIds.add(milestone.id);
+                }
+
+                const marker = createLayerBoundaryMarker(
+                    layer.depth_start_m,
+                    layer.vietnamese_name,
+                    layer.name,
+                    milestone
+                );
                 trackEl.appendChild(marker);
             }
         });
     }
 
     // 3. Tạo điểm kết thúc tại Challenger Deep 10.928m
+    const challengerMilestone = items ? items.find(
+        (i) => i.depth_m === MAX_DEPTH_M && i.item_type === 'MILESTONE'
+    ) : null;
+
+    if (challengerMilestone) {
+        handledItemIds.add(challengerMilestone.id);
+    }
+
+    // Khi có ExplorerItem loại MILESTONE được publish tại 10.928m, lấy dữ liệu từ database.
+    // Nếu chưa có dữ liệu trong DB, hiển thị placeholder thông báo nội dung đang được cập nhật.
+    const challengerItem = challengerMilestone || {
+        id: 'challenger-deep-endpoint',
+        name: 'Challenger Deep',
+        slug: 'challenger-deep',
+        item_type: 'MILESTONE',
+        depth_m: MAX_DEPTH_M,
+        layer_name: 'Tầng Địa ngục',
+        short_description: 'Nội dung thông tin về cột mốc Challenger Deep đang được cập nhật.',
+        fact: '',
+        image_url: '',
+        detail_url: '',
+        is_verified: false,
+    };
+
     const endPoint = createEndpointMarker(
         MAX_DEPTH_M,
         'Challenger Deep – 10.928 m',
-        'Điểm sâu nhất được ghi nhận tại rãnh Mariana – Điểm cuối hành trình'
+        'Điểm sâu nhất được ghi nhận tại rãnh Mariana – Điểm cuối hành trình',
+        challengerItem
     );
     trackEl.appendChild(endPoint);
 
-    // 4. Bố trí các đối tượng thám hiểm (ExplorerItem) nếu có
+    // 4. Bố trí các đối tượng thám hiểm (ExplorerItem) nếu có (loại trừ các item đã gộp vào marker)
     if (items && items.length > 0) {
         items.forEach((item) => {
-            const itemNode = createExplorerItemNode(item);
-            trackEl.appendChild(itemNode);
+            if (!handledItemIds.has(item.id)) {
+                const itemNode = createExplorerItemNode(item);
+                trackEl.appendChild(itemNode);
+            }
         });
     }
 
@@ -61,7 +109,7 @@ export function initStage(layers, items) {
 /**
  * Tạo phần tử mốc ranh giới tầng
  */
-function createLayerBoundaryMarker(depthM, viName, enName) {
+function createLayerBoundaryMarker(depthM, viName, enName, item = null) {
     const marker = document.createElement('div');
     marker.className = 'layer-boundary-marker';
     marker.style.top = `${depthM * PIXELS_PER_METER}px`;
@@ -75,13 +123,35 @@ function createLayerBoundaryMarker(depthM, viName, enName) {
         <div class="layer-boundary-line"></div>
     `;
 
+    // Nếu có đối tượng cột mốc gắn với ranh giới này, kích hoạt khả năng mở Inspector
+    if (item) {
+        marker.classList.add('is-interactive');
+        marker.tabIndex = 0;
+        marker.setAttribute('role', 'button');
+        marker.setAttribute(
+            'aria-label',
+            `Xem chi tiết cột mốc ${item.name} ở độ sâu ${numberFormatter.format(depthM)} mét`
+        );
+
+        marker.addEventListener('click', () => {
+            openInspector(item, marker);
+        });
+
+        marker.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openInspector(item, marker);
+            }
+        });
+    }
+
     return marker;
 }
 
 /**
  * Tạo phần tử mốc đầu/cuối hành trình
  */
-function createEndpointMarker(depthM, title, description) {
+function createEndpointMarker(depthM, title, description, item = null) {
     const point = document.createElement('div');
     point.className = 'journey-endpoint';
     if (depthM === 0) {
@@ -94,7 +164,29 @@ function createEndpointMarker(depthM, title, description) {
     point.innerHTML = `
         <h2>${title}</h2>
         <p>${description}</p>
+        ${item ? '<div class="endpoint-action-hint" style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--hud-accent-cyan);">✦ Nhấp để xem thông tin chi tiết</div>' : ''}
     `;
+
+    if (item) {
+        point.classList.add('is-interactive');
+        point.tabIndex = 0;
+        point.setAttribute('role', 'button');
+        point.setAttribute(
+            'aria-label',
+            `Xem chi tiết ${item.name} ở độ sâu ${numberFormatter.format(depthM)} mét`
+        );
+
+        point.addEventListener('click', () => {
+            openInspector(item, point);
+        });
+
+        point.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openInspector(item, point);
+            }
+        });
+    }
 
     return point;
 }

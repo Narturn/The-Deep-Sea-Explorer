@@ -41,7 +41,11 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
         self.mock_published_item.layer_id = 1
         self.mock_published_item.layer = self.mock_layers[0]
         self.mock_published_item.short_description = 'Sên biển xanh'
+        self.mock_published_item.fact = 'Có khả năng tích lũy nọc độc từ con sứa Physalia physalis để tự vệ.'
         self.mock_published_item.image_url = 'https://example.com/glaucus.jpg'
+        self.mock_published_item.image_source_url = 'https://example.com/glaucus-source'
+        self.mock_published_item.image_credit = 'Sylke Rohrlach'
+        self.mock_published_item.image_license = 'CC BY-SA 2.0'
         self.mock_published_item.detail_url = 'https://example.com/details'
         self.mock_published_item.is_verified = True
         self.mock_published_item.is_published = True
@@ -83,6 +87,8 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
         self.assertEqual(len(parsed_items), 1)
         self.assertEqual(parsed_items[0]['name'], 'Rồng xanh biển')
         self.assertEqual(parsed_items[0]['scientific_name'], 'Glaucus atlanticus')
+        self.assertEqual(parsed_items[0]['fact'], 'Có khả năng tích lũy nọc độc từ con sứa Physalia physalis để tự vệ.')
+        self.assertEqual(parsed_items[0]['image_credit'], 'Sylke Rohrlach')
 
         layers_script_content = content.split('<script id="ocean-layers-data" type="application/json">')[1].split('</script>')[0]
         parsed_layers = json.loads(layers_script_content)
@@ -106,7 +112,7 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
         self.assertRegex(content, r'stage(\.[a-f0-9]+)?\.css')
         self.assertIn('type="module"', content)
 
-        # Xác nhận các thành phần Phase 6 (Quick Jump & Inspector Drawer)
+        # Xác nhận các thành phần Phase 6 & Phase Content Management (Quick Jump & Inspector Drawer with Fact)
         self.assertRegex(content, r'quick_jump(\.[a-f0-9]+)?\.css')
         self.assertRegex(content, r'inspector(\.[a-f0-9]+)?\.css')
         self.assertIn('id="quick-jump-trigger"', content)
@@ -119,6 +125,8 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
         self.assertIn('id="inspector-type-badge"', content)
         self.assertIn('id="inspector-title"', content)
         self.assertIn('id="inspector-depth-val"', content)
+        self.assertIn('id="inspector-fact-container"', content)
+        self.assertIn('id="inspector-fact"', content)
         self.assertIn('id="inspector-detail-link"', content)
 
     @patch('explorer.views.ExplorerItem.objects')
@@ -155,7 +163,8 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
         item_data = context['explorer_items_data'][0]
         expected_item_keys = {
             'id', 'name', 'slug', 'item_type', 'scientific_name', 'depth_m',
-            'layer_id', 'layer_name', 'short_description', 'image_url',
+            'layer_id', 'layer_name', 'short_description', 'fact', 'image_url',
+            'image_source_url', 'image_credit', 'image_license',
             'detail_url', 'is_verified'
         }
         self.assertEqual(set(item_data.keys()), expected_item_keys)
@@ -206,11 +215,13 @@ class ExplorerValidationTests(SimpleTestCase):
             slug='ca-mat-thung',
             item_type=ExplorerItem.ItemType.CREATURE,
             depth_m=600,
-            layer=layer_meso
+            layer=layer_meso,
+            fact='Mắt hình ống nằm trong vòm đầu trong suốt chứa đầy chất lỏng.'
         )
         valid_item.clean()
         self.assertFalse(valid_item.is_verified)
         self.assertFalse(valid_item.is_published)
+        self.assertEqual(valid_item.fact, 'Mắt hình ống nằm trong vòm đầu trong suốt chứa đầy chất lỏng.')
 
         invalid_item = ExplorerItem(
             name='Cá lạc tầng',
