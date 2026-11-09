@@ -113,7 +113,7 @@
     pointer-events: none;
 }
 
-/* Mốc ranh giới các tầng biển (Layer Boundary Markers) */
+/* Mốc ranh giới các tầng biển (Layer Boundary Markers) - Trên cùng, đè lên các biển khác */
 .layer-boundary-marker {
     position: absolute;
     left: 5%;
@@ -123,13 +123,13 @@
     gap: 1rem;
     pointer-events: none;
     transform: translateY(-50%);
-    z-index: var(--z-depth-label);
+    z-index: var(--z-layer-marker); /* 30: Trên cùng, đè lên các biển khác */
 }
 
 .layer-boundary-marker.surface-marker {
     top: 74px;
     transform: none;
-    z-index: var(--z-depth-label);
+    z-index: var(--z-layer-marker); /* 30 */
 }
 
 .layer-boundary-marker.is-interactive {
@@ -210,7 +210,7 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    z-index: var(--z-layer-intro);
+    z-index: var(--z-layer-marker); /* 30: Trên cùng */
     transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -346,6 +346,25 @@
     font-weight: 600;
 }
 
+.card-depth-tag {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: var(--hud-accent-cyan);
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid rgba(56, 189, 248, 0.55);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+    z-index: 5; /* Đè lên trên hình minh họa */
+    white-space: nowrap;
+}
+
 .card-type-tag {
     position: absolute;
     top: 6px;
@@ -358,6 +377,7 @@
     border-radius: 4px;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    z-index: 4;
 }
 
 .card-type-tag.type-creature {

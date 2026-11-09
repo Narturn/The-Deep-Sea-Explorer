@@ -42,10 +42,10 @@
     --z-spotlight: 1;
     --z-depth-spine: 2;
     --z-connector: 3;
-    --z-depth-label: 4;
-    --z-card: 5;
-    --z-layer-intro: 6;
     --z-stage-content: 10;
+    --z-card: 10;
+    --z-depth-label: 20;
+    --z-layer-marker: 30;
     --z-hud: 50;
     --z-modal: 100;
 }

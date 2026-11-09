@@ -389,6 +389,7 @@ function createExplorerCardNode(layoutItem) {
 
     card.innerHTML = `
         <div class="card-thumb-wrapper">
+            <span class="card-depth-tag">${numberFormatter.format(item.depth_m)} m</span>
             ${item.image_url ? `
                 <img class="card-thumb-img" src="${item.image_url}" alt="${item.name}" loading="lazy"
                      onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
@@ -407,7 +408,6 @@ function createExplorerCardNode(layoutItem) {
         <div class="card-info">
             <div class="card-header">
                 <h3 class="card-title" title="${item.name}">${item.name}</h3>
-                <span class="card-depth-badge">${numberFormatter.format(item.depth_m)} m</span>
             </div>
         </div>
     `;
