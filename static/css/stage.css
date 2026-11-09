@@ -346,25 +346,6 @@
     font-weight: 600;
 }
 
-.card-depth-tag {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    font-weight: 800;
-    color: var(--hud-accent-cyan);
-    background: rgba(15, 23, 42, 0.94);
-    border: 1px solid rgba(56, 189, 248, 0.55);
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
-    z-index: 5; /* Đè lên trên hình minh họa */
-    white-space: nowrap;
-}
-
 .card-type-tag {
     position: absolute;
     top: 6px;
