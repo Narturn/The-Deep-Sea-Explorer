@@ -161,6 +161,10 @@
     backdrop-filter: blur(12px);
 }
 
+.journey-endpoint.start-point {
+    transform: translate(-50%, 0);
+}
+
 .journey-endpoint h2 {
     margin: 0 0 0.5rem 0;
     font-size: 1.5rem;

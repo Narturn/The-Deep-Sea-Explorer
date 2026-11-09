@@ -18,20 +18,21 @@ export function initStage(layers, items) {
     const trackHeight = MAX_DEPTH_M * PIXELS_PER_METER;
     trackEl.style.height = `${trackHeight}px`;
 
-    // 1. Tạo điểm khởi đầu tại 0m
+    // 1. Tạo điểm khởi đầu tại 0m: Tầng Nắng rọi (Epipelagic)
+    const layer0 = layers && layers.length > 0 ? layers[0] : null;
     const startPoint = createEndpointMarker(
         0,
-        'Mặt biển (Surface)',
-        'Bắt đầu hành trình thám hiểm xuống vùng biển sâu thẳm nhất hành tinh'
+        layer0 ? `${layer0.vietnamese_name} (${layer0.name})` : 'Tầng Nắng rọi (Epipelagic)',
+        '0 m – Mặt biển • Bắt đầu hành trình thám hiểm xuống vùng biển sâu thẳm nhất hành tinh'
     );
     trackEl.appendChild(startPoint);
 
-    // 2. Tạo các mốc ranh giới tầng đại dương
+    // 2. Tạo các mốc ranh giới tầng đại dương (hiển thị tầng bắt đầu tại độ sâu đó)
     if (layers && layers.length > 0) {
         layers.forEach((layer) => {
-            // Đặt marker tại mốc kết thúc của các tầng trung gian
-            if (layer.depth_end_m < MAX_DEPTH_M) {
-                const marker = createLayerBoundaryMarker(layer.depth_end_m, layer.vietnamese_name, layer.name);
+            // Đặt marker ranh giới tại mốc bắt đầu của các tầng (từ 200m trở đi)
+            if (layer.depth_start_m > 0) {
+                const marker = createLayerBoundaryMarker(layer.depth_start_m, layer.vietnamese_name, layer.name);
                 trackEl.appendChild(marker);
             }
         });
@@ -41,7 +42,7 @@ export function initStage(layers, items) {
     const endPoint = createEndpointMarker(
         MAX_DEPTH_M,
         'Challenger Deep – 10.928 m',
-        'Điểm sâu nhất được ghi nhận tại rãnh Mariana – Đáy vực thẳm của đại dương'
+        'Điểm sâu nhất được ghi nhận tại rãnh Mariana – Điểm cuối hành trình'
     );
     trackEl.appendChild(endPoint);
 
@@ -83,7 +84,12 @@ function createLayerBoundaryMarker(depthM, viName, enName) {
 function createEndpointMarker(depthM, title, description) {
     const point = document.createElement('div');
     point.className = 'journey-endpoint';
-    point.style.top = `${depthM * PIXELS_PER_METER}px`;
+    if (depthM === 0) {
+        point.classList.add('start-point');
+        point.style.top = '90px';
+    } else {
+        point.style.top = `${depthM * PIXELS_PER_METER}px`;
+    }
 
     point.innerHTML = `
         <h2>${title}</h2>
