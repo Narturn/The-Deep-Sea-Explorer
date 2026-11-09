@@ -1,0 +1,286 @@
+/* inspector.css - Bảng tra cứu thông tin sinh vật & cột mốc (Inspector Drawer) */
+
+/* Lớp phủ mờ nền (Backdrop) */
+.inspector-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(2, 4, 8, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: calc(var(--z-modal) - 1);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s;
+    pointer-events: none;
+}
+
+.inspector-backdrop.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Khung Drawer trượt từ cạnh phải */
+.inspector-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 440px;
+    max-width: 100vw;
+    height: 100vh;
+    background: rgba(6, 13, 26, 0.94);
+    border-left: 1px solid var(--hud-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.8);
+    z-index: var(--z-modal);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+}
+
+.inspector-drawer.open {
+    transform: translateX(0);
+}
+
+/* Phần đầu Drawer */
+.inspector-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.4);
+}
+
+.inspector-tags {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.inspector-type-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: var(--hud-accent-cyan);
+}
+
+.inspector-layer-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--hud-text-secondary);
+}
+
+.inspector-close-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--hud-text-secondary);
+    font-size: 1.25rem;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.inspector-close-btn:hover,
+.inspector-close-btn:focus-visible {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: var(--hud-accent-cyan);
+    color: #ffffff;
+    outline: none;
+}
+
+/* Thân nội dung Drawer */
+.inspector-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Khung ảnh minh họa */
+.inspector-image-wrapper {
+    width: 100%;
+    height: 220px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.inspector-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.2s ease;
+}
+
+.inspector-image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--hud-text-secondary);
+    font-size: 0.85rem;
+}
+
+.inspector-image-placeholder svg {
+    width: 48px;
+    height: 48px;
+    fill: currentColor;
+    opacity: 0.4;
+}
+
+/* Tên và thông số chính */
+.inspector-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.inspector-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.25;
+    margin: 0;
+}
+
+.inspector-scientific-name {
+    font-size: 0.95rem;
+    font-style: italic;
+    color: var(--hud-accent-cyan);
+    margin: 0;
+}
+
+.inspector-depth-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    background: rgba(15, 23, 42, 0.6);
+    border-left: 3px solid var(--hud-accent-cyan);
+    border-radius: 0 6px 6px 0;
+}
+
+.inspector-depth-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--hud-text-secondary);
+}
+
+.inspector-depth-val {
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+/* Mô tả */
+.inspector-desc-section {
+    font-size: 0.95rem;
+    color: #cbd5e1;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Thông tin bản quyền ảnh */
+.inspector-license-box {
+    margin-top: auto;
+    padding: 0.85rem;
+    background: rgba(15, 23, 42, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    font-size: 0.78rem;
+    color: var(--hud-text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.inspector-license-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.inspector-license-label {
+    font-weight: 600;
+}
+
+/* Nút liên kết tài liệu tham khảo chi tiết */
+.inspector-detail-link-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(56, 189, 248, 0.15));
+    border: 1px solid var(--hud-accent-cyan);
+    border-radius: 8px;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.inspector-detail-link-btn:hover {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.4), rgba(56, 189, 248, 0.3));
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+    transform: translateY(-1px);
+}
+
+/* Responsive Drawer trên mobile */
+@media (max-width: 640px) {
+    .inspector-drawer {
+        width: 100vw;
+        max-width: 100vw;
+    }
+
+    .inspector-header {
+        padding: 1rem;
+    }
+
+    .inspector-body {
+        padding: 1rem;
+    }
+
+    .inspector-image-wrapper {
+        height: 180px;
+    }
+
+    .inspector-title {
+        font-size: 1.35rem;
+    }
+}
+

@@ -3,6 +3,7 @@
  */
 
 import { MAX_DEPTH_M, PIXELS_PER_METER } from './physics.js';
+import { openInspector } from './inspector.js';
 
 const numberFormatter = new Intl.NumberFormat('vi-VN');
 
@@ -100,6 +101,9 @@ function createExplorerItemNode(item) {
     node.className = 'explorer-item-node';
     node.id = `item-${item.slug}`;
     node.style.top = `${item.depth_m * PIXELS_PER_METER}px`;
+    node.tabIndex = 0;
+    node.setAttribute('role', 'button');
+    node.setAttribute('aria-label', `Xem thông tin ${item.name} ở độ sâu ${numberFormatter.format(item.depth_m)} mét`);
 
     node.innerHTML = `
         <div class="explorer-item-header">
@@ -109,6 +113,18 @@ function createExplorerItemNode(item) {
         ${item.scientific_name ? `<div class="explorer-item-scientific">${item.scientific_name}</div>` : ''}
         ${item.short_description ? `<p class="explorer-item-desc">${item.short_description}</p>` : ''}
     `;
+
+    // Mở Inspector Drawer khi click hoặc ấn Enter/Space
+    node.addEventListener('click', () => {
+        openInspector(item, node);
+    });
+
+    node.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openInspector(item, node);
+        }
+    });
 
     return node;
 }

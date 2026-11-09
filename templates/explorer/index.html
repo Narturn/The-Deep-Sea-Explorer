@@ -20,7 +20,7 @@
         </div>
     </div>
 
-    <!-- Cột phải: Chỉ số môi trường mô phỏng -->
+    <!-- Cột phải: Chỉ số môi trường mô phỏng & Quick Jump trigger -->
     <div class="hud-right">
         <div class="env-indicator" title="Áp suất thủy tĩnh mô phỏng">
             <span class="env-indicator-label">Áp suất</span>
@@ -30,6 +30,10 @@
             <span class="env-indicator-label">Nhiệt độ</span>
             <span id="env-temp-value" class="env-indicator-value">24.0°C</span>
         </div>
+        <button id="quick-jump-trigger" class="quick-jump-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="quick-jump-panel" title="Mở danh mục nhảy nhanh">
+            <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            <span>Chuyển tầng</span>
+        </button>
     </div>
 
     <!-- Thanh tiến trình lặn mỏng ở chân HUD -->
@@ -37,6 +41,24 @@
         <div id="hud-progress-fill" class="hud-progress-bar-fill"></div>
     </div>
 </header>
+
+<!-- Quick Jump Navigation Panel -->
+<div id="quick-jump-panel" class="quick-jump-panel" role="dialog" aria-modal="false" aria-hidden="true" aria-labelledby="quick-jump-title">
+    <div class="quick-jump-header">
+        <h3 id="quick-jump-title" class="quick-jump-title">Chuyển tầng nhanh</h3>
+        <button id="quick-jump-close" class="quick-jump-close-btn" type="button" aria-label="Đóng menu chuyển tầng">&times;</button>
+    </div>
+    <div class="quick-jump-content">
+        <div class="quick-jump-section">
+            <div class="quick-jump-section-title">Các tầng đại dương</div>
+            <ul id="quick-jump-layers-list" class="quick-jump-list"></ul>
+        </div>
+        <div id="quick-jump-items-section" class="quick-jump-section" style="display: none;">
+            <div class="quick-jump-section-title">Cột mốc & Sinh vật</div>
+            <ul id="quick-jump-items-list" class="quick-jump-list"></ul>
+        </div>
+    </div>
+</div>
 
 <!-- Lớp 2: Môi trường đại dương cố định (Nền đổi màu, Đèn pha & Hạt phát sáng) -->
 <div id="ocean-background" class="ocean-background" aria-hidden="true"></div>
@@ -49,6 +71,36 @@
         <!-- Các mốc tầng và thực thể được render động bởi stage.js -->
     </div>
 </main>
+
+<!-- Lớp 4: Interactive Inspector Drawer & Backdrop -->
+<div id="inspector-backdrop" class="inspector-backdrop" aria-hidden="true"></div>
+
+<aside id="inspector-drawer" class="inspector-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="inspector-title" tabindex="-1">
+    <div class="inspector-header">
+        <div class="inspector-tags">
+            <span id="inspector-type-badge" class="inspector-type-badge">Sinh vật biển</span>
+            <span id="inspector-layer-badge" class="inspector-layer-badge">Tầng Nắng rọi</span>
+        </div>
+        <button id="inspector-close-btn" class="inspector-close-btn" type="button" aria-label="Đóng bảng thông tin">&times;</button>
+    </div>
+    <div class="inspector-body">
+        <div id="inspector-image-wrapper" class="inspector-image-wrapper"></div>
+        <div class="inspector-title-group">
+            <h2 id="inspector-title" class="inspector-title">Tên đối tượng</h2>
+            <div id="inspector-scientific" class="inspector-scientific-name">Tên khoa học</div>
+            <div class="inspector-depth-row">
+                <span class="inspector-depth-label">Độ sâu:</span>
+                <span id="inspector-depth-val" class="inspector-depth-val">0 m</span>
+            </div>
+        </div>
+        <p id="inspector-description" class="inspector-desc-section"></p>
+        <div id="inspector-license-box" class="inspector-license-box" style="display: none;"></div>
+        <a id="inspector-detail-link" class="inspector-detail-link-btn" href="#" target="_blank" rel="noopener noreferrer" style="display: none;">
+            <span>Xem tài liệu tham khảo chi tiết</span>
+            <svg style="width: 16px; height: 16px; fill: currentColor;" viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7z"/></svg>
+        </a>
+    </div>
+</aside>
 
 <!-- Nạp dữ liệu an toàn từ Django qua json_script -->
 {{ ocean_layers_data|json_script:"ocean-layers-data" }}

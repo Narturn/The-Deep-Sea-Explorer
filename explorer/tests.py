@@ -106,6 +106,21 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
         self.assertIn('stage.css', content)
         self.assertIn('type="module"', content)
 
+        # Xác nhận các thành phần Phase 6 (Quick Jump & Inspector Drawer)
+        self.assertIn('quick_jump.css', content)
+        self.assertIn('inspector.css', content)
+        self.assertIn('id="quick-jump-trigger"', content)
+        self.assertIn('id="quick-jump-panel"', content)
+        self.assertIn('id="quick-jump-layers-list"', content)
+        self.assertIn('id="quick-jump-items-list"', content)
+        self.assertIn('id="inspector-backdrop"', content)
+        self.assertIn('id="inspector-drawer"', content)
+        self.assertIn('id="inspector-close-btn"', content)
+        self.assertIn('id="inspector-type-badge"', content)
+        self.assertIn('id="inspector-title"', content)
+        self.assertIn('id="inspector-depth-val"', content)
+        self.assertIn('id="inspector-detail-link"', content)
+
     @patch('explorer.views.ExplorerItem.objects')
     @patch('explorer.views.OceanLayer.objects')
     def test_unpublished_items_are_excluded_by_filter(self, mock_layer_qs, mock_item_qs):

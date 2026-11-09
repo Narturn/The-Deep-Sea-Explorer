@@ -1,12 +1,14 @@
 /**
- * main.js - Entrypoint khởi tạo Frontend Core (Phase 5)
- * Đồng bộ dữ liệu, HUD, môi trường và Scroll Engine
+ * main.js - Entrypoint khởi tạo The Deep Sea Explorer (Phase 6)
+ * Đồng bộ dữ liệu, HUD, môi trường, Scroll Engine, Quick Jump và Inspector Drawer
  */
 
 import { initHUD } from './modules/hud.js';
 import { initEnvironment } from './modules/environment.js';
 import { initStage } from './modules/stage.js';
 import { initScrollEngine } from './modules/scroll_engine.js';
+import { initQuickJump } from './modules/quick_jump.js';
+import { initInspector } from './modules/inspector.js';
 
 function bootstrap() {
     const layersElement = document.getElementById('ocean-layers-data');
@@ -44,13 +46,19 @@ function bootstrap() {
     // 2. Khởi tạo hiệu ứng môi trường (Đèn pha chuột + hạt phát sáng)
     initEnvironment();
 
-    // 3. Khởi tạo Center Stage Canvas và các mốc ranh giới tầng
+    // 3. Khởi tạo Inspector Drawer
+    initInspector();
+
+    // 4. Khởi tạo Center Stage Canvas và các mốc ranh giới tầng
     initStage(layers, items);
 
-    // 4. Khởi tạo Scroll Engine đồng bộ Scroll <-> Depth (0m - 10.928m)
+    // 5. Khởi tạo Quick Jump Navigation
+    initQuickJump(layers, items);
+
+    // 6. Khởi tạo Scroll Engine đồng bộ Scroll <-> Depth (0m - 10.928m)
     initScrollEngine(layers);
 
-    console.log(`[DeepSea] Frontend Core đã sẵn sàng với ${layers.length} tầng đại dương và ${items.length} đối tượng.`);
+    console.log(`[DeepSea] Ứng dụng đã sẵn sàng với ${layers.length} tầng đại dương và ${items.length} đối tượng.`);
 }
 
 if (document.readyState === 'loading') {
