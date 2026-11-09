@@ -1,0 +1,47 @@
+:root {
+    /* Mảng màu gradient theo tầng đại dương */
+    --color-epipelagic-start: #1ca7d0;
+    --color-epipelagic-end: #0d5c8a;
+
+    --color-mesopelagic-start: #0d5c8a;
+    --color-mesopelagic-end: #101c42;
+
+    --color-bathypelagic-start: #101c42;
+    --color-bathypelagic-end: #080b18;
+
+    --color-abyssopelagic-start: #080b18;
+    --color-abyssopelagic-end: #04060c;
+
+    --color-hadalpelagic-start: #04060c;
+    --color-hadalpelagic-end: #020408;
+
+    /* Màu nền động khởi tạo */
+    --ocean-bg-current: var(--color-epipelagic-start);
+
+    /* Màu sắc HUD & Thành phần nổi */
+    --hud-bg: rgba(6, 13, 26, 0.78);
+    --hud-border: rgba(56, 189, 248, 0.25);
+    --hud-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    --hud-text-primary: #f8fafc;
+    --hud-text-secondary: #94a3b8;
+    --hud-accent-cyan: #38bdf8;
+    --hud-accent-teal: #2dd4bf;
+    --hud-accent-gold: #fbbf24;
+
+    /* Tọa độ chuột cho hiệu ứng đèn pha (mặc định ở giữa màn hình) */
+    --mouse-x: 50vw;
+    --mouse-y: 50vh;
+
+    /* Typography */
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+    /* Z-Index Architecture */
+    --z-bg: 1;
+    --z-particles: 2;
+    --z-spotlight: 3;
+    --z-stage-content: 10;
+    --z-hud: 50;
+    --z-modal: 100;
+}
+

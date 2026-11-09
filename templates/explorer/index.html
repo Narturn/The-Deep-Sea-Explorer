@@ -4,20 +4,57 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<main style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 4rem auto; padding: 0 1rem; line-height: 1.6; color: #1e293b;">
-    <h1 style="color: #0f172a; border-bottom: 2px solid #0284c7; padding-bottom: 0.5rem;">{{ title }}</h1>
-    <p style="color: #0284c7; font-weight: 600; font-size: 1.1rem;">Phase 4: Backend & Data Flow Ready</p>
-    <p>Dữ liệu tầng đại dương và đối tượng thám hiểm đã được kết nối an toàn từ PostgreSQL sang giao diện client thông qua <code>json_script</code>.</p>
+<!-- Lớp 1: Fixed Depth HUD Navigation & Status Bar -->
+<header class="depth-hud" role="banner" aria-label="Bảng trạng thái lặn biển sâu">
+    <!-- Cột trái: Tên dự án & Tầng biển hiện tại -->
+    <div class="hud-left">
+        <div class="hud-brand">The Deep Sea</div>
+        <div id="hud-layer-badge" class="hud-layer-badge" aria-live="polite">Tầng Nắng rọi</div>
+    </div>
 
-    <div id="data-status-box" style="margin-top: 1.5rem; padding: 1rem; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
-        <p style="margin: 0; font-weight: 500; color: #0369a1;">Đang khởi tạo kết nối dữ liệu client-side...</p>
+    <!-- Cột giữa: Đồng hồ độ sâu chủ đạo -->
+    <div class="hud-center">
+        <div class="depth-counter-wrapper" aria-label="Độ sâu hiện tại">
+            <span id="depth-counter-value" class="depth-counter-value">0</span>
+            <span class="depth-counter-unit">m</span>
+        </div>
+    </div>
+
+    <!-- Cột phải: Chỉ số môi trường mô phỏng -->
+    <div class="hud-right">
+        <div class="env-indicator" title="Áp suất thủy tĩnh mô phỏng">
+            <span class="env-indicator-label">Áp suất</span>
+            <span id="env-pressure-value" class="env-indicator-value">1.0 atm</span>
+        </div>
+        <div class="env-indicator" title="Nhiệt độ nước mô phỏng">
+            <span class="env-indicator-label">Nhiệt độ</span>
+            <span id="env-temp-value" class="env-indicator-value">24.0°C</span>
+        </div>
+    </div>
+
+    <!-- Thanh tiến trình lặn mỏng ở chân HUD -->
+    <div class="hud-progress-bar-track" aria-hidden="true">
+        <div id="hud-progress-fill" class="hud-progress-bar-fill"></div>
+    </div>
+</header>
+
+<!-- Lớp 2: Môi trường đại dương cố định (Nền đổi màu, Đèn pha & Hạt phát sáng) -->
+<div id="ocean-background" class="ocean-background" aria-hidden="true"></div>
+<div id="ocean-spotlight" class="ocean-spotlight" aria-hidden="true"></div>
+<div id="particles-container" class="particles-container" aria-hidden="true"></div>
+
+<!-- Lớp 3: Center Stage Canvas - Trục cuộn dọc chính 0m -> 10.928m -->
+<main id="ocean-stage" class="ocean-stage" role="main">
+    <div id="vertical-track" class="vertical-track">
+        <!-- Các mốc tầng và thực thể được render động bởi stage.js -->
     </div>
 </main>
 
+<!-- Nạp dữ liệu an toàn từ Django qua json_script -->
 {{ ocean_layers_data|json_script:"ocean-layers-data" }}
 {{ explorer_items_data|json_script:"explorer-items-data" }}
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/main.js' %}"></script>
+<script type="module" src="{% static 'js/main.js' %}"></script>
 {% endblock %}

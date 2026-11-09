@@ -1,0 +1,233 @@
+/* Center Stage & Ocean Environment Styling */
+
+/* Nền đại dương cố định phủ toàn viewport */
+.ocean-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: var(--z-bg);
+    background-color: var(--ocean-bg-current);
+    pointer-events: none;
+    transition: background-color 0.15s linear;
+}
+
+/* Hiệu ứng đèn pha tàu lặn rọi theo con trỏ chuột trên desktop */
+.ocean-spotlight {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: var(--z-spotlight);
+    pointer-events: none;
+    background: radial-gradient(
+        circle 320px at var(--mouse-x) var(--mouse-y),
+        rgba(56, 189, 248, 0.12) 0%,
+        rgba(14, 165, 233, 0.05) 50%,
+        transparent 100%
+    );
+    mix-blend-mode: screen;
+    opacity: 0.85;
+}
+
+/* Vô hiệu hóa spotlight trên thiết bị cảm ứng hoặc màn hình nhỏ */
+@media (hover: none) and (pointer: coarse), (max-width: 768px) {
+    .ocean-spotlight {
+        background: radial-gradient(
+            circle 250px at 50% 50%,
+            rgba(56, 189, 248, 0.08) 0%,
+            transparent 100%
+        );
+    }
+}
+
+/* Thùng chứa các hạt phát sáng (Bioluminescence Particles) */
+.particles-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: var(--z-particles);
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.bioluminescence-particle {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, #38bdf8 0%, rgba(45, 212, 191, 0.4) 60%, transparent 100%);
+    box-shadow: 0 0 10px #38bdf8, 0 0 20px #2dd4bf;
+    opacity: 0;
+    animation: particle-float 7s infinite ease-in-out;
+}
+
+@keyframes particle-float {
+    0% {
+        transform: translateY(20px) scale(0.6);
+        opacity: 0;
+    }
+    30% {
+        opacity: 0.65;
+    }
+    70% {
+        opacity: 0.85;
+    }
+    100% {
+        transform: translateY(-80px) scale(1.1);
+        opacity: 0;
+    }
+}
+
+/* Trục hành trình cuộn dọc chính */
+.ocean-stage {
+    position: relative;
+    width: 100%;
+    z-index: var(--z-stage-content);
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+.vertical-track {
+    position: relative;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    /* Chiều cao track được tính toán động bởi scroll_engine.js */
+}
+
+/* Mốc ranh giới các tầng biển (Layer Boundary Markers) */
+.layer-boundary-marker {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.layer-boundary-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.4), transparent);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.layer-boundary-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 1rem;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 9999px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.layer-boundary-depth {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--hud-accent-cyan);
+}
+
+.layer-boundary-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* Mốc bắt đầu và kết thúc hành trình */
+.journey-endpoint {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 90%;
+    max-width: 500px;
+    padding: 2rem;
+    background: rgba(6, 13, 26, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(12px);
+}
+
+.journey-endpoint h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    color: var(--hud-accent-cyan);
+}
+
+.journey-endpoint p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--hud-text-secondary);
+    line-height: 1.5;
+}
+
+/* Thẻ đối tượng thám hiểm (Explorer Items) */
+.explorer-item-node {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 440px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+.explorer-item-node:hover {
+    transform: translate(-50%, -52%);
+    border-color: var(--hud-accent-cyan);
+    box-shadow: 0 8px 28px rgba(56, 189, 248, 0.25);
+}
+
+.explorer-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.35rem;
+}
+
+.explorer-item-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.explorer-item-depth {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--hud-accent-cyan);
+}
+
+.explorer-item-scientific {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: var(--hud-text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.explorer-item-desc {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+    margin: 0;
+}
+

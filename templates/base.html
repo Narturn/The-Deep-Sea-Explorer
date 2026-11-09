@@ -1,9 +1,17 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}The Deep Sea Explorer{% endblock %}</title>
+    
+    <!-- Core Styling -->
+    <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/hud.css' %}">
+    <link rel="stylesheet" href="{% static 'css/stage.css' %}">
+
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -11,4 +19,3 @@
     {% block extra_js %}{% endblock %}
 </body>
 </html>
-

@@ -89,6 +89,23 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
         self.assertEqual(len(parsed_layers), 5)
         self.assertEqual(parsed_layers[0]['vietnamese_name'], 'Tầng Nắng rọi')
 
+        # Xác nhận các thành phần Frontend Core (Phase 5) hiện diện đầy đủ
+        self.assertIn('class="depth-hud"', content)
+        self.assertIn('id="depth-counter-value"', content)
+        self.assertIn('id="hud-layer-badge"', content)
+        self.assertIn('id="env-pressure-value"', content)
+        self.assertIn('id="env-temp-value"', content)
+        self.assertIn('id="ocean-background"', content)
+        self.assertIn('id="ocean-spotlight"', content)
+        self.assertIn('id="particles-container"', content)
+        self.assertIn('id="ocean-stage"', content)
+        self.assertIn('id="vertical-track"', content)
+        self.assertIn('variables.css', content)
+        self.assertIn('base.css', content)
+        self.assertIn('hud.css', content)
+        self.assertIn('stage.css', content)
+        self.assertIn('type="module"', content)
+
     @patch('explorer.views.ExplorerItem.objects')
     @patch('explorer.views.OceanLayer.objects')
     def test_unpublished_items_are_excluded_by_filter(self, mock_layer_qs, mock_item_qs):
