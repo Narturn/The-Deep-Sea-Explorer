@@ -1,0 +1,73 @@
+[
+  {
+    "model": "explorer.oceanlayer",
+    "pk": 1,
+    "fields": {
+      "name": "Epipelagic",
+      "vietnamese_name": "Tầng Nắng rọi",
+      "depth_start_m": 0,
+      "depth_end_m": 200,
+      "sort_order": 1,
+      "color_start": "#1ca7d0",
+      "color_end": "#0d5c8a",
+      "description": "Ánh sáng mặt trời dồi dào, hệ sinh thái quang hợp phát triển mạnh."
+    }
+  },
+  {
+    "model": "explorer.oceanlayer",
+    "pk": 2,
+    "fields": {
+      "name": "Mesopelagic",
+      "vietnamese_name": "Tầng Chạng vạng",
+      "depth_start_m": 200,
+      "depth_end_m": 1000,
+      "sort_order": 2,
+      "color_start": "#0d5c8a",
+      "color_end": "#101c42",
+      "description": "Ánh sáng yếu dần, nhiệt độ giảm nhanh (thermocline)."
+    }
+  },
+  {
+    "model": "explorer.oceanlayer",
+    "pk": 3,
+    "fields": {
+      "name": "Bathypelagic",
+      "vietnamese_name": "Tầng Nửa đêm",
+      "depth_start_m": 1000,
+      "depth_end_m": 4000,
+      "sort_order": 3,
+      "color_start": "#101c42",
+      "color_end": "#080b18",
+      "description": "Ánh sáng mặt trời gần như không còn; áp suất tăng rất cao."
+    }
+  },
+  {
+    "model": "explorer.oceanlayer",
+    "pk": 4,
+    "fields": {
+      "name": "Abyssopelagic",
+      "vietnamese_name": "Tầng Vực thẳm",
+      "depth_start_m": 4000,
+      "depth_end_m": 6000,
+      "sort_order": 4,
+      "color_start": "#080b18",
+      "color_end": "#04060c",
+      "description": "Môi trường tối, lạnh và có áp suất rất cao."
+    }
+  },
+  {
+    "model": "explorer.oceanlayer",
+    "pk": 5,
+    "fields": {
+      "name": "Hadalpelagic",
+      "vietnamese_name": "Tầng Địa ngục",
+      "depth_start_m": 6000,
+      "depth_end_m": 10928,
+      "sort_order": 5,
+      "color_start": "#04060c",
+      "color_end": "#020408",
+      "description": "Các rãnh đại dương sâu, địa hình đáy biển phức tạp và áp suất cực lớn."
+    }
+  }
+]
+
