@@ -1,0 +1,665 @@
+/* ==========================================================================
+   Ocean Explorer – 3D Globe Homepage Styling (globe.css)
+   Thiết kế theo phong cách Đại dương, Khoa học & Khám phá
+   ========================================================================== */
+
+.ocean-explorer-app {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(14, 116, 144, 0.22) 0%, rgba(7, 25, 48, 0.85) 52%, #020611 100%);
+    color: var(--hud-text-primary, #f8fafc);
+    display: flex;
+    flex-direction: column;
+}
+
+/* --------------------------------------------------------------------------
+   1. Thanh Header mỏng gọn trên đỉnh
+   -------------------------------------------------------------------------- */
+.ocean-explorer-header {
+    position: relative;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 0.9rem 1.75rem;
+    background: rgba(4, 10, 22, 0.72);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    flex-shrink: 0;
+}
+
+.ocean-brand-group {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.25rem;
+}
+
+.ocean-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #38bdf8;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.ocean-title::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 12px #38bdf8;
+}
+
+.ocean-subtitle {
+    margin: 0;
+    font-size: 0.86rem;
+    color: var(--hud-text-secondary, #94a3b8);
+    line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+   2. Bố cục chính: Danh sách trái – Quả địa cầu 3D trung tâm – Thông tin phải
+   -------------------------------------------------------------------------- */
+.ocean-explorer-main {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 290px minmax(360px, 1fr) 390px;
+    gap: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    align-items: stretch;
+}
+
+/* --------------------------------------------------------------------------
+   3. Khu vực Quả địa cầu 3D trung tâm
+   -------------------------------------------------------------------------- */
+.globe-section {
+    grid-column: 2;
+    grid-row: 1;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 16px;
+}
+
+.globe-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.globe-canvas {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.globe-canvas:active {
+    cursor: grabbing;
+}
+
+.globe-controls-hint {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.35rem 0.9rem;
+    border-radius: 9999px;
+    background: rgba(6, 15, 32, 0.78);
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    color: #94a3b8;
+    font-size: 0.76rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Thông báo thay thế khi WebGL không khả dụng */
+.globe-fallback-notice {
+    position: absolute;
+    inset: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    background: rgba(9, 18, 36, 0.92);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 14px;
+    color: #e2e8f0;
+    z-index: 12;
+}
+
+.globe-fallback-notice[hidden] {
+    display: none !important;
+}
+
+.globe-fallback-notice h3 {
+    margin: 0 0 0.5rem 0;
+    color: #38bdf8;
+    font-size: 1.1rem;
+}
+
+.globe-fallback-notice p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #94a3b8;
+    max-width: 420px;
+    line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   4. Markers đánh dấu 7 địa điểm trên Quả địa cầu 3D
+   -------------------------------------------------------------------------- */
+.globe-marker {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    pointer-events: auto;
+    user-select: none;
+    background: transparent;
+    border: none;
+    padding: 4px;
+    color: #f8fafc;
+    font-family: var(--font-sans, system-ui, sans-serif);
+    transition: transform 0.2s ease;
+}
+
+.globe-marker:hover,
+.globe-marker:focus-visible {
+    transform: translate(-50%, -50%) scale(1.18);
+    outline: none;
+    z-index: 30;
+}
+
+.globe-marker-pin {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #38bdf8;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.9);
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    flex-shrink: 0;
+}
+
+/* Mariana Trench (is_explorable=True) nổi bật hơn một chút */
+.globe-marker.is-explorable .globe-marker-pin {
+    width: 15px;
+    height: 15px;
+    background: #2dd4bf;
+    border-color: #fef08a;
+    box-shadow: 0 0 14px rgba(45, 212, 191, 0.95), 0 0 24px rgba(56, 189, 248, 0.7);
+}
+
+/* Trạng thái marker đang được chọn */
+.globe-marker.is-selected .globe-marker-pin {
+    transform: scale(1.25);
+    background: #f59e0b;
+    border-color: #ffffff;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.95);
+}
+
+.globe-marker-tooltip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 4px);
+    transform: translateX(-50%);
+    padding: 0.22rem 0.55rem;
+    border-radius: 6px;
+    background: rgba(6, 15, 32, 0.94);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    color: #f8fafc;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+.globe-marker:hover .globe-marker-tooltip,
+.globe-marker:focus-visible .globe-marker-tooltip,
+.globe-marker.is-selected .globe-marker-tooltip {
+    opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   5. Cột trái: Danh sách 7 địa điểm đại dương
+   -------------------------------------------------------------------------- */
+.ocean-locations-nav {
+    grid-column: 1;
+    grid-row: 1;
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    background: rgba(8, 17, 34, 0.82);
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    border-radius: 14px;
+    padding: 1rem;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+    overflow-y: auto;
+}
+
+.locations-nav-title {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ocean-locations-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.ocean-location-item {
+    margin: 0;
+}
+
+.ocean-location-select-btn {
+    width: 100%;
+    text-align: left;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(56, 189, 248, 0.16);
+    border-radius: 10px;
+    padding: 0.65rem 0.8rem;
+    color: #e2e8f0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+    font-family: inherit;
+}
+
+.ocean-location-select-btn:hover,
+.ocean-location-select-btn:focus-visible {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(56, 189, 248, 0.5);
+    transform: translateX(2px);
+    outline: none;
+}
+
+.ocean-location-item.is-active .ocean-location-select-btn {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.24), rgba(15, 23, 42, 0.92));
+    border-color: #38bdf8;
+    box-shadow: 0 0 18px rgba(56, 189, 248, 0.22);
+}
+
+.location-item-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.location-item-vi-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.location-item-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.location-item-en-name {
+    font-size: 0.76rem;
+    color: #94a3b8;
+}
+
+.location-item-depth {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    padding: 0.1rem 0.42rem;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.location-explorable-pill {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #2dd4bf;
+    background: rgba(45, 212, 191, 0.14);
+    border: 1px solid rgba(45, 212, 191, 0.4);
+    padding: 0.08rem 0.38rem;
+    border-radius: 9999px;
+}
+
+/* --------------------------------------------------------------------------
+   6. Cột phải: Bảng thông tin chi tiết địa điểm & Quần xã sinh vật (Ecosystems)
+   -------------------------------------------------------------------------- */
+.location-detail-panel {
+    grid-column: 3;
+    grid-row: 1;
+    z-index: 15;
+    background: rgba(8, 17, 34, 0.86);
+    border: 1px solid rgba(56, 189, 248, 0.26);
+    border-radius: 14px;
+    padding: 1.25rem;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Khi JavaScript kích hoạt, chỉ hiển thị thẻ của địa điểm đang được chọn */
+.location-detail-panel.js-ready .location-detail-card {
+    display: none;
+}
+
+.location-detail-panel.js-ready .location-detail-card.is-active {
+    display: flex;
+}
+
+.location-detail-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.location-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.location-region-badge {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 0.18rem 0.55rem;
+    border-radius: 9999px;
+}
+
+.location-card-title {
+    margin: 0.15rem 0 0 0;
+    font-size: 1.28rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.25;
+}
+
+.location-card-title span {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-top: 0.15rem;
+}
+
+.location-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin-top: 0.25rem;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.78rem;
+    color: #cbd5e1;
+}
+
+.location-max-depth {
+    color: #2dd4bf;
+    font-weight: 700;
+}
+
+.location-short-desc {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    line-height: 1.5;
+}
+
+.location-full-desc {
+    margin: 0;
+    font-size: 0.84rem;
+    color: #94a3b8;
+    line-height: 1.55;
+}
+
+/* Danh sách Quần xã sinh vật (Ecosystems) */
+.location-ecosystems-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-top: 0.25rem;
+}
+
+.ecosystems-section-title {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #38bdf8;
+}
+
+.location-ecosystems-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.ecosystem-item {
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(56, 189, 248, 0.18);
+    border-radius: 10px;
+    padding: 0.7rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.ecosystem-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.ecosystem-name {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.ecosystem-type-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #2dd4bf;
+    background: rgba(45, 212, 191, 0.12);
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+}
+
+.ecosystem-specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    font-size: 0.74rem;
+    color: #cbd5e1;
+    font-family: var(--font-mono, monospace);
+}
+
+.ecosystem-desc {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    line-height: 1.45;
+}
+
+/* Footer: Nút Explore hoặc thông báo trạng thái */
+.location-card-footer {
+    margin-top: 0.35rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.location-explore-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.75rem 1.2rem;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #0284c7, #0d9488);
+    border: 1px solid rgba(56, 189, 248, 0.6);
+    color: #ffffff;
+    font-size: 0.92rem;
+    font-weight: 700;
+    text-decoration: none;
+    letter-spacing: 0.03em;
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.35);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.location-explore-btn:hover,
+.location-explore-btn:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(56, 189, 248, 0.5);
+    filter: brightness(1.08);
+    outline: none;
+}
+
+.location-coming-soon-msg {
+    margin: 0;
+    padding: 0.65rem 0.9rem;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px dashed rgba(148, 163, 184, 0.35);
+    color: #94a3b8;
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   7. Responsive cho màn hình Tablet & Mobile
+   -------------------------------------------------------------------------- */
+@media (max-width: 1080px) {
+    .ocean-explorer-app {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+    }
+
+    .ocean-explorer-main {
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .globe-section {
+        order: 1;
+        height: 50vh;
+        min-height: 340px;
+    }
+
+    .ocean-locations-nav {
+        order: 2;
+        max-height: none;
+    }
+
+    .ocean-locations-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 0.5rem;
+    }
+
+    .location-detail-panel {
+        order: 3;
+        max-height: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .ocean-explorer-header {
+        padding: 0.75rem 1rem;
+    }
+
+    .ocean-title {
+        font-size: 1.08rem;
+    }
+
+    .ocean-subtitle {
+        font-size: 0.8rem;
+    }
+
+    .globe-section {
+        height: 44vh;
+        min-height: 290px;
+    }
+
+    .ocean-locations-list {
+        grid-template-columns: 1fr;
+    }
+
+    .globe-controls-hint {
+        font-size: 0.68rem;
+        padding: 0.25rem 0.65rem;
+    }
+}
+

@@ -4,7 +4,7 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block page_css %}
-<!-- Tách biệt khỏi CSS riêng của Deep Sea Explorer (hud, stage, quick_jump, inspector) -->
+<link rel="stylesheet" href="{% static 'css/globe.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -20,10 +20,17 @@
     </header>
 
     <main id="ocean-explorer-main" class="ocean-explorer-main" role="main">
-        <!-- 2. Khu vực dành riêng cho quả địa cầu 3D (ID ổn định cho Globe.gl ở bước sau) -->
+        <!-- 2. Khu vực dành riêng cho quả địa cầu 3D -->
         <section id="globe-section" class="globe-section" aria-label="Quả địa cầu 3D tương tác">
             <div id="globe-container" class="globe-container">
                 <div id="globe-canvas" class="globe-canvas"></div>
+                <div id="globe-controls-hint" class="globe-controls-hint" aria-hidden="true">
+                    Kéo để xoay 360° • Cuộn để thu phóng • Nhấp vào điểm đánh dấu để xem hệ sinh thái
+                </div>
+                <div id="globe-fallback-notice" class="globe-fallback-notice" hidden>
+                    <h3>Chế độ hiển thị 3D WebGL hiện không khả dụng</h3>
+                    <p>Trình duyệt hoặc thiết bị của bạn hiện không bật WebGL. Bạn vẫn có thể chọn trực tiếp một trong 7 địa điểm đại dương ở danh sách bên cạnh để tra cứu thông tin và khám phá hệ sinh thái.</p>
+                </div>
             </div>
         </section>
 
@@ -32,11 +39,18 @@
             <h2 class="locations-nav-title">Các địa điểm đại dương</h2>
             <ul id="ocean-locations-list" class="ocean-locations-list">
                 {% for loc in ocean_locations_data %}
-                <li class="ocean-location-item" data-location-slug="{{ loc.slug }}" data-lat="{{ loc.latitude }}" data-lng="{{ loc.longitude }}">
-                    <button type="button" class="ocean-location-select-btn" data-location-slug="{{ loc.slug }}">
-                        <span class="location-item-vi-name">{{ loc.vietnamese_name }}</span>
-                        <span class="location-item-en-name">({{ loc.name }})</span>
-                        <span class="location-item-depth">{{ loc.max_depth_m }} m</span>
+                <li class="ocean-location-item{% if forloop.first %} is-active{% endif %}" data-location-slug="{{ loc.slug }}" data-lat="{{ loc.latitude }}" data-lng="{{ loc.longitude }}">
+                    <button type="button" class="ocean-location-select-btn" data-location-slug="{{ loc.slug }}" aria-current="{% if forloop.first %}true{% else %}false{% endif %}">
+                        <div class="location-item-top-row">
+                            <span class="location-item-vi-name">{{ loc.vietnamese_name }}</span>
+                            <span class="location-item-depth">{{ loc.max_depth_m }} m</span>
+                        </div>
+                        <div class="location-item-bottom-row">
+                            <span class="location-item-en-name">{{ loc.name }}</span>
+                            {% if loc.is_explorable %}
+                            <span class="location-explorable-pill">Explore</span>
+                            {% endif %}
+                        </div>
                     </button>
                 </li>
                 {% endfor %}
@@ -44,9 +58,9 @@
         </nav>
 
         <!-- 4. Khu vực hiển thị thông tin chi tiết địa điểm & các Ecosystem -->
-        <section id="location-detail-panel" class="location-detail-panel" aria-live="polite" aria-label="Thông tin chi tiết địa điểm">
+        <section id="location-detail-panel" class="location-detail-panel js-ready" aria-live="polite" aria-label="Thông tin chi tiết địa điểm">
             {% for loc in ocean_locations_data %}
-            <article id="location-card-{{ loc.slug }}" class="location-detail-card" data-location-slug="{{ loc.slug }}">
+            <article id="location-card-{{ loc.slug }}" class="location-detail-card{% if forloop.first %} is-active{% endif %}" data-location-slug="{{ loc.slug }}"{% if not forloop.first %} hidden{% endif %}>
                 <header class="location-card-header">
                     <div class="location-region-badge">{{ loc.region }}</div>
                     <h2 class="location-card-title">{{ loc.vietnamese_name }} <span>({{ loc.name }})</span></h2>
@@ -104,7 +118,13 @@
     </main>
 </div>
 
-<!-- Nhúng dữ liệu JSON an toàn qua json_script cho JavaScript ở bước tiếp theo -->
+<!-- Nhúng dữ liệu JSON an toàn qua json_script cho JavaScript -->
 {{ ocean_locations_data|json_script:"ocean-locations-data" }}
 {% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/globe.gl@2.35.1/dist/globe.gl.min.js" defer></script>
+<script type="module" src="{% static 'js/globe.js' %}"></script>
+{% endblock %}
+
 
