@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.text import slugify
 
@@ -209,3 +210,107 @@ class ExplorerItem(models.Model):
                             f"'{self.layer.vietnamese_name}' {valid_range}."
                         )
                     })
+
+
+class OceanLocation(models.Model):
+    """
+    Quản lý các địa điểm đại dương hiển thị trên quả địa cầu 3D (Ocean Explorer).
+    """
+    name = models.CharField(max_length=150, verbose_name="Tên quốc tế")
+    vietnamese_name = models.CharField(max_length=150, verbose_name="Tên tiếng Việt")
+    slug = models.SlugField(max_length=160, unique=True, verbose_name="Định danh (Slug)")
+    region = models.CharField(max_length=150, verbose_name="Khu vực / Đại dương")
+    latitude = models.FloatField(
+        validators=[MinValueValidator(-90.0), MaxValueValidator(90.0)],
+        verbose_name="Vĩ độ",
+    )
+    longitude = models.FloatField(
+        validators=[MinValueValidator(-180.0), MaxValueValidator(180.0)],
+        verbose_name="Kinh độ",
+    )
+    max_depth_m = models.PositiveIntegerField(verbose_name="Độ sâu tối đa (m)")
+    short_description = models.TextField(verbose_name="Mô tả ngắn")
+    description = models.TextField(verbose_name="Mô tả chi tiết")
+    image_url = models.URLField(max_length=500, blank=True, verbose_name="URL hình ảnh")
+    explore_url = models.CharField(max_length=255, blank=True, verbose_name="Đường dẫn khám phá")
+    is_explorable = models.BooleanField(default=False, verbose_name="Cho phép khám phá sâu")
+    is_published = models.BooleanField(default=True, verbose_name="Được xuất bản")
+    sort_order = models.PositiveSmallIntegerField(default=0, verbose_name="Thứ tự hiển thị")
+
+    class Meta:
+        verbose_name = "Địa điểm đại dương"
+        verbose_name_plural = "Các địa điểm đại dương"
+        ordering = ["sort_order", "name"]
+
+    def __str__(self):
+        return f"{self.vietnamese_name} ({self.name})"
+
+    def clean(self):
+        super().clean()
+        if not self.slug and self.name:
+            self.slug = slugify(self.name)
+        if self.latitude is not None and not (-90.0 <= self.latitude <= 90.0):
+            raise ValidationError({"latitude": "Vĩ độ phải nằm trong khoảng từ -90 đến 90."})
+        if self.longitude is not None and not (-180.0 <= self.longitude <= 180.0):
+            raise ValidationError({"longitude": "Kinh độ phải nằm trong khoảng từ -180 đến 180."})
+
+
+class Ecosystem(models.Model):
+    """
+    Quản lý các quần xã sinh vật gắn với từng địa điểm đại dương.
+    """
+    class EcosystemType(models.TextChoices):
+        CORAL_REEF = "CORAL_REEF", "Rạn san hô (Coral Reef)"
+        MANGROVE = "MANGROVE", "Rừng ngập mặn (Mangrove)"
+        KELP_FOREST = "KELP_FOREST", "Rừng tảo bẹ (Kelp Forest)"
+        SEAGRASS = "SEAGRASS", "Thảm cỏ biển (Seagrass)"
+        POLAR_ICE = "POLAR_ICE", "Băng cực (Polar Ice)"
+        HYDROTHERMAL_VENT = "HYDROTHERMAL_VENT", "Miệng phun thủy nhiệt (Hydrothermal Vent)"
+        HADAL_TRENCH = "HADAL_TRENCH", "Rãnh sâu Hadal (Hadal Trench)"
+
+    class LightLevel(models.TextChoices):
+        HIGH = "HIGH", "Cao (Ánh sáng mặt trời dồi dào)"
+        MEDIUM = "MEDIUM", "Trung bình (Ánh sáng khuếch tán / Mùa cực)"
+        LOW = "LOW", "Thấp (Chạng vạng / Ánh sáng yếu)"
+        NONE = "NONE", "Không có ánh sáng (Tối hoàn toàn / Hóa tổng hợp)"
+
+    location = models.ForeignKey(
+        OceanLocation,
+        on_delete=models.CASCADE,
+        related_name="ecosystems",
+        verbose_name="Địa điểm đại dương",
+    )
+    name = models.CharField(max_length=150, verbose_name="Tên quốc tế")
+    vietnamese_name = models.CharField(max_length=150, verbose_name="Tên tiếng Việt")
+    slug = models.SlugField(max_length=160, unique=True, verbose_name="Định danh (Slug)")
+    ecosystem_type = models.CharField(
+        max_length=30,
+        choices=EcosystemType.choices,
+        verbose_name="Nhóm quần xã",
+    )
+    depth_range_text = models.CharField(max_length=100, verbose_name="Khoảng độ sâu")
+    temperature_range_text = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Khoảng nhiệt độ",
+    )
+    light_level = models.CharField(
+        max_length=20,
+        choices=LightLevel.choices,
+        verbose_name="Mức độ ánh sáng",
+    )
+    description = models.TextField(verbose_name="Mô tả sinh thái")
+
+    class Meta:
+        verbose_name = "Quần xã sinh vật"
+        verbose_name_plural = "Các quần xã sinh vật"
+        ordering = ["location__sort_order", "name"]
+
+    def __str__(self):
+        return f"{self.vietnamese_name} ({self.name}) – {self.location.vietnamese_name}"
+
+    def clean(self):
+        super().clean()
+        if not self.slug and self.name:
+            self.slug = slugify(self.name)
+

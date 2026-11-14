@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ExplorerItem, OceanLayer, ReferenceSource
+from .models import Ecosystem, ExplorerItem, OceanLayer, OceanLocation, ReferenceSource
 
 
 @admin.register(OceanLayer)
@@ -128,3 +128,101 @@ class ExplorerItemAdmin(admin.ModelAdmin):
     @admin.display(description="Độ sâu (m)", ordering="depth_m")
     def depth_display(self, obj):
         return f"{obj.depth_m:,}m"
+
+
+class EcosystemInline(admin.StackedInline):
+    model = Ecosystem
+    extra = 1
+    prepopulated_fields = {"slug": ("name",)}
+    fields = (
+        ("name", "vietnamese_name", "slug"),
+        ("ecosystem_type", "light_level"),
+        ("depth_range_text", "temperature_range_text"),
+        "description",
+    )
+
+
+@admin.register(OceanLocation)
+class OceanLocationAdmin(admin.ModelAdmin):
+    list_display = (
+        "sort_order",
+        "vietnamese_name",
+        "name",
+        "region",
+        "coordinates_display",
+        "max_depth_display",
+        "ecosystem_count",
+        "is_explorable",
+        "is_published",
+    )
+    list_display_links = ("vietnamese_name", "name")
+    list_filter = ("is_explorable", "is_published", "region")
+    search_fields = ("name", "vietnamese_name", "region", "short_description", "description")
+    ordering = ("sort_order", "name")
+    prepopulated_fields = {"slug": ("name",)}
+    list_editable = ("is_explorable", "is_published")
+    inlines = [EcosystemInline]
+    save_on_top = True
+
+    fieldsets = (
+        (
+            "Thông tin địa điểm",
+            {
+                "fields": (
+                    "sort_order",
+                    ("name", "vietnamese_name"),
+                    ("slug", "region"),
+                    ("latitude", "longitude", "max_depth_m"),
+                ),
+            },
+        ),
+        (
+            "Nội dung & Hình ảnh",
+            {
+                "fields": (
+                    "short_description",
+                    "description",
+                    "image_url",
+                ),
+            },
+        ),
+        (
+            "Điều hướng & Trạng thái",
+            {
+                "fields": (
+                    ("is_explorable", "is_published"),
+                    "explore_url",
+                ),
+            },
+        ),
+    )
+
+    @admin.display(description="Tọa độ (Lat, Lng)")
+    def coordinates_display(self, obj):
+        return f"{obj.latitude:.4f}, {obj.longitude:.4f}"
+
+    @admin.display(description="Độ sâu tối đa", ordering="max_depth_m")
+    def max_depth_display(self, obj):
+        return f"{obj.max_depth_m:,}m"
+
+    @admin.display(description="Số quần xã")
+    def ecosystem_count(self, obj):
+        return obj.ecosystems.count()
+
+
+@admin.register(Ecosystem)
+class EcosystemAdmin(admin.ModelAdmin):
+    list_display = (
+        "vietnamese_name",
+        "name",
+        "location",
+        "ecosystem_type",
+        "depth_range_text",
+        "light_level",
+    )
+    list_display_links = ("vietnamese_name", "name")
+    list_filter = ("ecosystem_type", "light_level", "location")
+    search_fields = ("name", "vietnamese_name", "description", "location__name", "location__vietnamese_name")
+    ordering = ("location__sort_order", "name")
+    prepopulated_fields = {"slug": ("name",)}
+
