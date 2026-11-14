@@ -6,9 +6,9 @@
 {% block content %}
 <!-- Lớp 1: Fixed Depth HUD Navigation & Status Bar -->
 <header class="depth-hud" role="banner" aria-label="Bảng trạng thái lặn biển sâu">
-    <!-- Cột trái: Tên dự án & Tầng biển hiện tại -->
+    <!-- Cột trái: Nút quay về trang chính Ocean Explorer & Tầng biển hiện tại -->
     <div class="hud-left">
-        <a href="{% url 'explorer:globe' %}" class="hud-brand" style="text-decoration: none; color: inherit;" title="Quay về quả địa cầu Ocean Explorer">The Deep Sea</a>
+        <a href="{% url 'explorer:globe' %}" class="hud-brand" style="text-decoration: none;" title="Quay về trang chính Ocean Explorer">&larr; Trang chủ Ocean Explorer</a>
         <div id="hud-layer-badge" class="hud-layer-badge" aria-live="polite">Tầng Nắng rọi</div>
     </div>
 

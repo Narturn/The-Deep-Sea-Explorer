@@ -7,10 +7,21 @@ const DEFAULT_CAMERA_ALTITUDE = 2.15;
 const FOCUS_CAMERA_ALTITUDE = 1.75;
 const CAMERA_TRANSITION_MS = 750;
 
+const MARKER_COLOR_DEFAULT = '#38bdf8';
+const MARKER_COLOR_EXPLORABLE = '#2dd4bf';
+const MARKER_COLOR_SELECTED = '#f59e0b';
+
+const MARKER_RADIUS_DEFAULT = 0.62;
+const MARKER_RADIUS_EXPLORABLE = 0.85;
+const MARKER_RADIUS_SELECTED = 0.98;
+
+const MARKER_ALTITUDE_DEFAULT = 0.008;
+const MARKER_ALTITUDE_EXPLORABLE = 0.014;
+const MARKER_ALTITUDE_SELECTED = 0.02;
+
 let isBootstrapped = false;
 let globeInstance = null;
 let locationsMap = new Map();
-let markerElementsMap = new Map();
 let currentSelectedSlug = null;
 
 /**
@@ -80,43 +91,58 @@ function showWebGLFallback() {
 }
 
 /**
- * 3. Tạo phần tử DOM cho từng Marker trên bề mặt quả địa cầu
+ * Escape ký tự HTML để hiển thị an toàn trong tooltip của Globe.gl
  */
-function createMarkerElement(location) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'globe-marker';
-    if (location.is_explorable) {
-        btn.classList.add('is-explorable');
-    }
-    if (location.slug === currentSelectedSlug) {
-        btn.classList.add('is-selected');
-    }
+function escapeHtml(text) {
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
-    btn.dataset.locationSlug = location.slug;
-    btn.setAttribute(
-        'aria-label',
-        `${location.vietnamese_name} (${location.name}) – Độ sâu tối đa ${location.max_depth_m}m`
-    );
-    btn.setAttribute('aria-pressed', location.slug === currentSelectedSlug ? 'true' : 'false');
+/**
+ * 3. Tính toán kích thước, độ nổi và màu sắc cho từng Marker 3D (pointsData)
+ */
+function getMarkerRadius(location) {
+    if (location.slug === currentSelectedSlug) return MARKER_RADIUS_SELECTED;
+    if (location.is_explorable) return MARKER_RADIUS_EXPLORABLE;
+    return MARKER_RADIUS_DEFAULT;
+}
 
-    const pin = document.createElement('span');
-    pin.className = 'globe-marker-pin';
+function getMarkerAltitude(location) {
+    if (location.slug === currentSelectedSlug) return MARKER_ALTITUDE_SELECTED;
+    if (location.is_explorable) return MARKER_ALTITUDE_EXPLORABLE;
+    return MARKER_ALTITUDE_DEFAULT;
+}
 
-    const tooltip = document.createElement('span');
-    tooltip.className = 'globe-marker-tooltip';
-    tooltip.textContent = `${location.vietnamese_name} (${location.name})`;
+function getMarkerColor(location) {
+    if (location.slug === currentSelectedSlug) return MARKER_COLOR_SELECTED;
+    if (location.is_explorable) return MARKER_COLOR_EXPLORABLE;
+    return MARKER_COLOR_DEFAULT;
+}
 
-    btn.appendChild(pin);
-    btn.appendChild(tooltip);
+/**
+ * Tạo nội dung HTML tooltip khi di chuột lên Marker 3D
+ */
+function createPointTooltipHtml(location) {
+    const viName = escapeHtml(location.vietnamese_name);
+    const enName = escapeHtml(location.name);
+    const depth = Number(location.max_depth_m || 0).toLocaleString('vi-VN');
+    const badgeHtml = location.is_explorable
+        ? '<span class="globe-point-tooltip-badge">Explore</span>'
+        : '';
 
-    btn.addEventListener('click', (event) => {
-        event.stopPropagation();
-        handleLocationSelect(location.slug, { moveCamera: true });
-    });
-
-    markerElementsMap.set(location.slug, btn);
-    return btn;
+    return `
+        <div class="globe-point-tooltip">
+            <div class="globe-point-tooltip-header">
+                <span class="globe-point-tooltip-title">${viName} (${enName})</span>
+                ${badgeHtml}
+            </div>
+            <div class="globe-point-tooltip-meta">Độ sâu tối đa: ${depth} m</div>
+        </div>
+    `;
 }
 
 /**
@@ -143,24 +169,25 @@ function initGlobeInstance(canvasEl, locations) {
             .showAtmosphere(true)
             .atmosphereColor('#38bdf8')
             .atmosphereAltitude(0.14)
-            // Đánh dấu chấm tọa độ chuẩn trên bề mặt cầu
+            // Render trực tiếp 7 marker trong không gian 3D WebGL (pointsData) để gắn chặt vào bề mặt Trái Đất
             .pointsData(locations)
             .pointLat((d) => d.latitude)
             .pointLng((d) => d.longitude)
-            .pointAltitude(0.004)
-            .pointRadius((d) => (d.is_explorable ? 0.42 : 0.32))
-            .pointColor((d) => (d.is_explorable ? '#2dd4bf' : '#38bdf8'))
+            .pointAltitude((d) => getMarkerAltitude(d))
+            .pointRadius((d) => getMarkerRadius(d))
+            .pointColor((d) => getMarkerColor(d))
+            .pointResolution(24)
+            .pointsMerge(false)
+            .pointsTransitionDuration(0)
+            .pointLabel((d) => createPointTooltipHtml(d))
             .onPointClick((d) => {
                 if (d && d.slug) {
                     handleLocationSelect(d.slug, { moveCamera: true });
                 }
             })
-            // Gắn 7 HTML markers tương tác rõ ràng tại đúng (latitude, longitude)
-            .htmlElementsData(locations)
-            .htmlLat((d) => d.latitude)
-            .htmlLng((d) => d.longitude)
-            .htmlAltitude(0.015)
-            .htmlElement((d) => createMarkerElement(d));
+            .onPointHover((hoverPoint) => {
+                canvasEl.style.cursor = hoverPoint ? 'pointer' : 'grab';
+            });
 
         // Giới hạn Pixel Ratio tối đa ở mức 2 để tiết kiệm tài nguyên GPU
         const renderer = typeof world.renderer === 'function' ? world.renderer() : null;
@@ -201,16 +228,23 @@ function initGlobeInstance(canvasEl, locations) {
 }
 
 /**
- * 5. Cập nhật trạng thái Marker đang được chọn trên Quả địa cầu và hướng nhẹ camera tới tọa độ
+ * 5. Cập nhật trạng thái Marker 3D đang được chọn trên Quả địa cầu và hướng nhẹ camera tới tọa độ
  */
 function updateActiveMarker(selectedLocation, shouldMoveCamera = true) {
-    markerElementsMap.forEach((el, slug) => {
-        const isSelected = slug === selectedLocation.slug;
-        el.classList.toggle('is-selected', isSelected);
-        el.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-    });
+    if (!globeInstance) return;
 
-    if (shouldMoveCamera && globeInstance && typeof globeInstance.pointOfView === 'function') {
+    if (
+        typeof globeInstance.pointAltitude === 'function' &&
+        typeof globeInstance.pointRadius === 'function' &&
+        typeof globeInstance.pointColor === 'function'
+    ) {
+        globeInstance
+            .pointAltitude((d) => getMarkerAltitude(d))
+            .pointRadius((d) => getMarkerRadius(d))
+            .pointColor((d) => getMarkerColor(d));
+    }
+
+    if (shouldMoveCamera && typeof globeInstance.pointOfView === 'function') {
         globeInstance.pointOfView(
             {
                 lat: selectedLocation.latitude,

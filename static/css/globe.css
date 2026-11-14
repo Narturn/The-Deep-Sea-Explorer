@@ -176,83 +176,52 @@
 }
 
 /* --------------------------------------------------------------------------
-   4. Markers đánh dấu 7 địa điểm trên Quả địa cầu 3D
+   4. Tooltip cho Marker 3D (pointsData) trên Quả địa cầu
    -------------------------------------------------------------------------- */
-.globe-marker {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    transform: translate(-50%, -50%);
-    cursor: pointer;
-    pointer-events: auto;
-    user-select: none;
-    background: transparent;
-    border: none;
-    padding: 4px;
-    color: #f8fafc;
-    font-family: var(--font-sans, system-ui, sans-serif);
-    transition: transform 0.2s ease;
-}
-
-.globe-marker:hover,
-.globe-marker:focus-visible {
-    transform: translate(-50%, -50%) scale(1.18);
-    outline: none;
-    z-index: 30;
-}
-
-.globe-marker-pin {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #38bdf8;
-    border: 2px solid #ffffff;
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.9);
-    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-    flex-shrink: 0;
-}
-
-/* Mariana Trench (is_explorable=True) nổi bật hơn một chút */
-.globe-marker.is-explorable .globe-marker-pin {
-    width: 15px;
-    height: 15px;
-    background: #2dd4bf;
-    border-color: #fef08a;
-    box-shadow: 0 0 14px rgba(45, 212, 191, 0.95), 0 0 24px rgba(56, 189, 248, 0.7);
-}
-
-/* Trạng thái marker đang được chọn */
-.globe-marker.is-selected .globe-marker-pin {
-    transform: scale(1.25);
-    background: #f59e0b;
-    border-color: #ffffff;
-    box-shadow: 0 0 16px rgba(245, 158, 11, 0.95);
-}
-
-.globe-marker-tooltip {
-    position: absolute;
-    left: 50%;
-    bottom: calc(100% + 4px);
-    transform: translateX(-50%);
-    padding: 0.22rem 0.55rem;
-    border-radius: 6px;
+.globe-point-tooltip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: 8px;
     background: rgba(6, 15, 32, 0.94);
     border: 1px solid rgba(56, 189, 248, 0.45);
     color: #f8fafc;
-    font-size: 0.72rem;
-    font-weight: 600;
-    white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
-    opacity: 0;
+    font-family: var(--font-sans, system-ui, sans-serif);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.72);
     pointer-events: none;
-    transition: opacity 0.15s ease;
+    white-space: nowrap;
 }
 
-.globe-marker:hover .globe-marker-tooltip,
-.globe-marker:focus-visible .globe-marker-tooltip,
-.globe-marker.is-selected .globe-marker-tooltip {
-    opacity: 1;
+.globe-point-tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.globe-point-tooltip-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.globe-point-tooltip-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #2dd4bf;
+    background: rgba(45, 212, 191, 0.16);
+    border: 1px solid rgba(45, 212, 191, 0.45);
+    padding: 0.05rem 0.35rem;
+    border-radius: 9999px;
+}
+
+.globe-point-tooltip-meta {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.7rem;
+    color: #38bdf8;
+    font-weight: 600;
 }
 
 /* --------------------------------------------------------------------------
