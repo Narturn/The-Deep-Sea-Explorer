@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_css %}
+<!-- Tách biệt khỏi CSS riêng của Deep Sea Explorer (hud, stage, quick_jump, inspector) -->
+{% endblock %}
+
+{% block content %}
+<div id="ocean-explorer-app" class="ocean-explorer-app">
+    <!-- 1. Khu vực tiêu đề và giới thiệu ngắn -->
+    <header id="ocean-explorer-header" class="ocean-explorer-header" role="banner">
+        <div class="ocean-brand-group">
+            <h1 class="ocean-title">Ocean Explorer</h1>
+            <p class="ocean-subtitle">
+                Khám phá 7 vùng biển và các quần xã sinh vật đặc trưng trên Trái Đất. Chọn một tọa độ trên quả địa cầu để xem hệ sinh thái hoặc bắt đầu hành trình lặn sâu.
+            </p>
+        </div>
+    </header>
+
+    <main id="ocean-explorer-main" class="ocean-explorer-main" role="main">
+        <!-- 2. Khu vực dành riêng cho quả địa cầu 3D (ID ổn định cho Globe.gl ở bước sau) -->
+        <section id="globe-section" class="globe-section" aria-label="Quả địa cầu 3D tương tác">
+            <div id="globe-container" class="globe-container">
+                <div id="globe-canvas" class="globe-canvas"></div>
+            </div>
+        </section>
+
+        <!-- 3. Danh sách các địa điểm đại dương -->
+        <nav id="ocean-locations-nav" class="ocean-locations-nav" aria-label="Danh sách địa điểm đại dương">
+            <h2 class="locations-nav-title">Các địa điểm đại dương</h2>
+            <ul id="ocean-locations-list" class="ocean-locations-list">
+                {% for loc in ocean_locations_data %}
+                <li class="ocean-location-item" data-location-slug="{{ loc.slug }}" data-lat="{{ loc.latitude }}" data-lng="{{ loc.longitude }}">
+                    <button type="button" class="ocean-location-select-btn" data-location-slug="{{ loc.slug }}">
+                        <span class="location-item-vi-name">{{ loc.vietnamese_name }}</span>
+                        <span class="location-item-en-name">({{ loc.name }})</span>
+                        <span class="location-item-depth">{{ loc.max_depth_m }} m</span>
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+
+        <!-- 4. Khu vực hiển thị thông tin chi tiết địa điểm & các Ecosystem -->
+        <section id="location-detail-panel" class="location-detail-panel" aria-live="polite" aria-label="Thông tin chi tiết địa điểm">
+            {% for loc in ocean_locations_data %}
+            <article id="location-card-{{ loc.slug }}" class="location-detail-card" data-location-slug="{{ loc.slug }}">
+                <header class="location-card-header">
+                    <div class="location-region-badge">{{ loc.region }}</div>
+                    <h2 class="location-card-title">{{ loc.vietnamese_name }} <span>({{ loc.name }})</span></h2>
+                    <div class="location-card-meta">
+                        <span class="location-coords">Tọa độ: {{ loc.latitude }}, {{ loc.longitude }}</span>
+                        <span class="location-max-depth">Độ sâu tối đa: {{ loc.max_depth_m }} m</span>
+                    </div>
+                </header>
+
+                {% if loc.image_url %}
+                <div class="location-card-image-wrapper">
+                    <img src="{{ loc.image_url }}" alt="{{ loc.vietnamese_name }}" class="location-card-image" loading="lazy">
+                </div>
+                {% endif %}
+
+                <p class="location-short-desc">{{ loc.short_description }}</p>
+                <p class="location-full-desc">{{ loc.description }}</p>
+
+                <!-- 5. Khu vực liệt kê các Ecosystem thuộc địa điểm -->
+                <div class="location-ecosystems-section">
+                    <h3 class="ecosystems-section-title">Các quần xã sinh vật (Ecosystems)</h3>
+                    <ul class="location-ecosystems-list">
+                        {% for eco in loc.ecosystems %}
+                        <li class="ecosystem-item" data-ecosystem-slug="{{ eco.slug }}" data-ecosystem-type="{{ eco.ecosystem_type }}">
+                            <div class="ecosystem-header">
+                                <strong class="ecosystem-name">{{ eco.vietnamese_name }} ({{ eco.name }})</strong>
+                                <span class="ecosystem-type-badge">{{ eco.ecosystem_type_display }}</span>
+                            </div>
+                            <div class="ecosystem-specs">
+                                <span class="ecosystem-depth">Độ sâu: {{ eco.depth_range_text }}</span>
+                                {% if eco.temperature_range_text %}
+                                <span class="ecosystem-temp">Nhiệt độ: {{ eco.temperature_range_text }}</span>
+                                {% endif %}
+                                <span class="ecosystem-light">Ánh sáng: {{ eco.light_level_display }}</span>
+                            </div>
+                            <p class="ecosystem-desc">{{ eco.description }}</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- 6. Nút Explore hoặc thông báo trạng thái -->
+                <footer class="location-card-footer">
+                    {% if loc.is_explorable and loc.explore_url %}
+                    <a href="{{ loc.explore_url }}" class="location-explore-btn" data-explore-slug="{{ loc.slug }}">
+                        Explore {{ loc.name }}
+                    </a>
+                    {% else %}
+                    <p class="location-coming-soon-msg">Hành trình lặn chi tiết đang được cập nhật</p>
+                    {% endif %}
+                </footer>
+            </article>
+            {% endfor %}
+        </section>
+    </main>
+</div>
+
+<!-- Nhúng dữ liệu JSON an toàn qua json_script cho JavaScript ở bước tiếp theo -->
+{{ ocean_locations_data|json_script:"ocean-locations-data" }}
+{% endblock %}
+

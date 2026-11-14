@@ -1,5 +1,59 @@
 from django.views.generic import TemplateView
-from .models import ExplorerItem, OceanLayer
+from .models import ExplorerItem, OceanLayer, OceanLocation
+
+
+class OceanGlobeView(TemplateView):
+    template_name = 'explorer/globe.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Ocean Explorer – Khám phá các vùng biển trên thế giới'
+
+        locations_qs = (
+            OceanLocation.objects.filter(is_published=True)
+            .prefetch_related('ecosystems')
+            .order_by('sort_order')
+        )
+
+        locations_data = []
+        for location in locations_qs:
+            ecosystems_data = [
+                {
+                    'id': eco.id,
+                    'name': eco.name,
+                    'vietnamese_name': eco.vietnamese_name,
+                    'slug': eco.slug,
+                    'ecosystem_type': eco.ecosystem_type,
+                    'ecosystem_type_display': eco.get_ecosystem_type_display(),
+                    'depth_range_text': eco.depth_range_text,
+                    'temperature_range_text': eco.temperature_range_text,
+                    'light_level': eco.light_level,
+                    'light_level_display': eco.get_light_level_display(),
+                    'description': eco.description,
+                }
+                for eco in location.ecosystems.all()
+            ]
+
+            locations_data.append({
+                'id': location.id,
+                'name': location.name,
+                'vietnamese_name': location.vietnamese_name,
+                'slug': location.slug,
+                'region': location.region,
+                'latitude': location.latitude,
+                'longitude': location.longitude,
+                'max_depth_m': location.max_depth_m,
+                'short_description': location.short_description,
+                'description': location.description,
+                'image_url': location.image_url,
+                'is_explorable': location.is_explorable,
+                'explore_url': location.explore_url if location.is_explorable else '',
+                'sort_order': location.sort_order,
+                'ecosystems': ecosystems_data,
+            })
+
+        context['ocean_locations_data'] = locations_data
+        return context
 
 
 class IndexView(TemplateView):

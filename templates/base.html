@@ -9,10 +9,12 @@
     <!-- Core Styling -->
     <link rel="stylesheet" href="{% static 'css/variables.css' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    {% block page_css %}
     <link rel="stylesheet" href="{% static 'css/hud.css' %}">
     <link rel="stylesheet" href="{% static 'css/stage.css' %}">
     <link rel="stylesheet" href="{% static 'css/quick_jump.css' %}">
     <link rel="stylesheet" href="{% static 'css/inspector.css' %}">
+    {% endblock %}
 
     {% block extra_css %}{% endblock %}
 </head>

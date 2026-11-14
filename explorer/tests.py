@@ -2,8 +2,8 @@ import json
 from unittest.mock import MagicMock, patch
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
-from explorer.models import ExplorerItem, OceanLayer, ReferenceSource
-from explorer.views import IndexView
+from explorer.models import Ecosystem, ExplorerItem, OceanLayer, OceanLocation, ReferenceSource
+from explorer.views import IndexView, OceanGlobeView
 
 
 class ExplorerRouteAndDataFlowTests(SimpleTestCase):
@@ -58,7 +58,7 @@ class ExplorerRouteAndDataFlowTests(SimpleTestCase):
             self.mock_published_item
         ]
 
-        response = self.client.get('/')
+        response = self.client.get('/mariana-trench/')
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'explorer/index.html')
         self.assertTemplateUsed(response, 'base.html')
@@ -315,3 +315,110 @@ class ExplorerValidationTests(SimpleTestCase):
             published_year=2023
         )
         self.assertEqual(str(ref), 'NOAA Ocean Exploration Report (2023)')
+
+
+class OceanGlobeViewTests(SimpleTestCase):
+    def setUp(self):
+        # Tạo mock 7 địa điểm đại dương theo dữ liệu chuẩn
+        location_specs = [
+            (1, 'Great Barrier Reef', 'Rạn san hô Great Barrier', 'great-barrier-reef', 'Biển San Hô, Úc', -18.2871, 147.6992, 2000, False, ''),
+            (2, 'Sundarbans', 'Rừng ngập mặn Sundarbans', 'sundarbans', 'Vịnh Bengal', 21.9497, 89.1833, 50, False, ''),
+            (3, 'Monterey Bay', 'Vịnh Monterey', 'monterey-bay', 'Đông Bắc Thái Bình Dương', 36.8, -121.9, 3600, False, ''),
+            (4, 'Shark Bay', 'Vịnh Cá Mập', 'shark-bay', 'Tây Úc', -25.7833, 113.7, 29, False, ''),
+            (5, 'Antarctic Peninsula', 'Bán đảo Nam Cực', 'antarctic-peninsula', 'Nam Đại Dương', -65.5, -64.0, 1500, False, ''),
+            (6, 'East Pacific Rise', 'Đới nâng Đông Thái Bình Dương', 'east-pacific-rise', 'Đông Nam Thái Bình Dương', -9.8333, -104.2833, 2800, False, ''),
+            (7, 'Mariana Trench', 'Rãnh Mariana', 'mariana-trench', 'Tây Bắc Thái Bình Dương', 11.3493, 142.1996, 10928, True, '/mariana-trench/'),
+        ]
+
+        self.mock_locations = []
+        for idx, name, vi_name, slug, region, lat, lng, depth, explorable, url in location_specs:
+            loc = MagicMock()
+            loc.id = idx
+            loc.name = name
+            loc.vietnamese_name = vi_name
+            loc.slug = slug
+            loc.region = region
+            loc.latitude = lat
+            loc.longitude = lng
+            loc.max_depth_m = depth
+            loc.short_description = f'Mô tả ngắn {vi_name}'
+            loc.description = f'Mô tả chi tiết {vi_name}'
+            loc.image_url = ''
+            loc.is_explorable = explorable
+            loc.explore_url = url
+            loc.is_published = True
+            loc.sort_order = idx
+
+            eco = MagicMock()
+            eco.id = idx * 10
+            eco.name = f'{name} Ecosystem'
+            eco.vietnamese_name = f'Quần xã {vi_name}'
+            eco.slug = f'{slug}-eco'
+            eco.ecosystem_type = Ecosystem.EcosystemType.HADAL_TRENCH if explorable else Ecosystem.EcosystemType.CORAL_REEF
+            eco.get_ecosystem_type_display.return_value = 'Rãnh sâu Hadal (Hadal Trench)' if explorable else 'Rạn san hô (Coral Reef)'
+            eco.depth_range_text = f'0m – {depth}m'
+            eco.temperature_range_text = '1°C – 25°C'
+            eco.light_level = Ecosystem.LightLevel.NONE if explorable else Ecosystem.LightLevel.HIGH
+            eco.get_light_level_display.return_value = 'Không có ánh sáng' if explorable else 'Cao'
+            eco.description = f'Đặc điểm sinh thái {vi_name}'
+
+            loc.ecosystems.all.return_value = [eco]
+            self.mock_locations.append(loc)
+
+    @patch('explorer.views.OceanLocation.objects')
+    def test_globe_homepage_status_template_and_locations(self, mock_loc_qs):
+        mock_loc_qs.filter.return_value.prefetch_related.return_value.order_by.return_value = self.mock_locations
+
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'explorer/globe.html')
+        self.assertTemplateUsed(response, 'base.html')
+
+        # Chỉ truy vấn các địa điểm có is_published=True
+        mock_loc_qs.filter.assert_called_once_with(is_published=True)
+
+        locations_data = response.context['ocean_locations_data']
+        self.assertEqual(len(locations_data), 7)
+
+        # Kiểm tra 6 địa điểm đầu không có link Explore hoạt động
+        for loc_dict in locations_data[:6]:
+            self.assertFalse(loc_dict['is_explorable'])
+            self.assertEqual(loc_dict['explore_url'], '')
+
+        # Kiểm tra Mariana Trench có link /mariana-trench/
+        mariana = locations_data[6]
+        self.assertEqual(mariana['name'], 'Mariana Trench')
+        self.assertTrue(mariana['is_explorable'])
+        self.assertEqual(mariana['explore_url'], '/mariana-trench/')
+
+        # Kiểm tra dữ liệu Ecosystem đi kèm từng địa điểm
+        self.assertEqual(len(mariana['ecosystems']), 1)
+        self.assertEqual(mariana['ecosystems'][0]['ecosystem_type'], 'HADAL_TRENCH')
+        self.assertEqual(mariana['ecosystems'][0]['depth_range_text'], '0m – 10928m')
+
+        # Kiểm tra HTML render và json_script
+        content = response.content.decode()
+        self.assertIn('id="globe-container"', content)
+        self.assertIn('id="globe-canvas"', content)
+        self.assertIn('id="ocean-locations-data"', content)
+        self.assertIn('href="/mariana-trench/"', content)
+        self.assertEqual(content.count('class="location-explore-btn"'), 1)
+        self.assertEqual(content.count('Hành trình lặn chi tiết đang được cập nhật'), 6)
+
+        # Đảm bảo JSON trong json_script hợp lệ và chứa đủ 7 địa điểm
+        script_json = content.split('<script id="ocean-locations-data" type="application/json">')[1].split('</script>')[0]
+        parsed_locations = json.loads(script_json)
+        self.assertEqual(len(parsed_locations), 7)
+        self.assertEqual(parsed_locations[6]['slug'], 'mariana-trench')
+        self.assertEqual(parsed_locations[6]['explore_url'], '/mariana-trench/')
+
+    @patch('explorer.views.OceanLocation.objects')
+    def test_unpublished_locations_are_excluded(self, mock_loc_qs):
+        mock_loc_qs.filter.return_value.prefetch_related.return_value.order_by.return_value = []
+
+        view = OceanGlobeView()
+        context = view.get_context_data()
+
+        mock_loc_qs.filter.assert_called_once_with(is_published=True)
+        self.assertEqual(context['ocean_locations_data'], [])
+
