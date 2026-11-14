@@ -1,5 +1,8 @@
+from django.db.models import Prefetch
+from django.http import Http404
+from django.urls import reverse
 from django.views.generic import TemplateView
-from .models import ExplorerItem, OceanLayer, OceanLocation
+from .models import ExplorerItem, MarineSpecies, OceanLayer, OceanLocation, SpeciesEcosystem
 
 
 class OceanGlobeView(TemplateView):
@@ -9,16 +12,41 @@ class OceanGlobeView(TemplateView):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Ocean Explorer – Khám phá các vùng biển trên thế giới'
 
+        published_species_links_prefetch = Prefetch(
+            'ecosystems__species_links',
+            queryset=(
+                SpeciesEcosystem.objects.filter(species__is_published=True)
+                .select_related('species')
+                .order_by('-is_key_species', 'species__vietnamese_name', 'species__name')
+            ),
+        )
+
         locations_qs = (
             OceanLocation.objects.filter(is_published=True)
-            .prefetch_related('ecosystems')
+            .prefetch_related('ecosystems', published_species_links_prefetch)
             .order_by('sort_order')
         )
 
         locations_data = []
         for location in locations_qs:
-            ecosystems_data = [
-                {
+            ecosystems_data = []
+            for eco in location.ecosystems.all():
+                species_data = []
+                for link in eco.species_links.all():
+                    sp = getattr(link, 'species', None)
+                    if not sp or not getattr(sp, 'is_published', False):
+                        continue
+                    species_data.append({
+                        'id': sp.id,
+                        'name': sp.name,
+                        'vietnamese_name': sp.vietnamese_name,
+                        'scientific_name': sp.scientific_name,
+                        'slug': sp.slug,
+                        'image_url': sp.image_url,
+                        'detail_url': reverse('explorer:species_detail', kwargs={'slug': sp.slug}),
+                    })
+
+                ecosystems_data.append({
                     'id': eco.id,
                     'name': eco.name,
                     'vietnamese_name': eco.vietnamese_name,
@@ -30,9 +58,8 @@ class OceanGlobeView(TemplateView):
                     'light_level': eco.light_level,
                     'light_level_display': eco.get_light_level_display(),
                     'description': eco.description,
-                }
-                for eco in location.ecosystems.all()
-            ]
+                    'species': species_data,
+                })
 
             locations_data.append({
                 'id': location.id,
@@ -53,6 +80,82 @@ class OceanGlobeView(TemplateView):
             })
 
         context['ocean_locations_data'] = locations_data
+        return context
+
+
+class MarineSpeciesDetailView(TemplateView):
+    template_name = 'explorer/species_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        slug = self.kwargs.get('slug')
+
+        ecosystem_links_prefetch = Prefetch(
+            'ecosystem_links',
+            queryset=(
+                SpeciesEcosystem.objects.select_related('ecosystem', 'ecosystem__location')
+                .order_by('ecosystem__location__sort_order', 'ecosystem__name')
+            ),
+        )
+
+        try:
+            species = (
+                MarineSpecies.objects.filter(is_published=True)
+                .prefetch_related(
+                    'references',
+                    ecosystem_links_prefetch,
+                )
+                .get(slug=slug)
+            )
+        except MarineSpecies.DoesNotExist as exc:
+            raise Http404("Sinh vật không tồn tại hoặc chưa được xuất bản.") from exc
+
+        context['species'] = {
+            'id': species.id,
+            'name': species.name,
+            'vietnamese_name': species.vietnamese_name,
+            'scientific_name': species.scientific_name,
+            'slug': species.slug,
+            'species_group': species.species_group,
+            'species_group_display': species.get_species_group_display(),
+            'conservation_status': species.conservation_status,
+            'conservation_status_display': species.get_conservation_status_display(),
+            'min_depth_m': species.min_depth_m,
+            'max_depth_m': species.max_depth_m,
+            'short_description': species.short_description,
+            'description': species.description,
+            'biological_traits': species.biological_traits,
+            'image_url': species.image_url,
+            'image_source_url': species.image_source_url,
+            'image_credit': species.image_credit,
+            'image_license': species.image_license,
+        }
+        context['ecosystem_links'] = [
+            {
+                'ecosystem_slug': link.ecosystem.slug,
+                'ecosystem_name': link.ecosystem.name,
+                'ecosystem_vietnamese_name': link.ecosystem.vietnamese_name,
+                'ecosystem_type_display': link.ecosystem.get_ecosystem_type_display(),
+                'ecosystem_depth_range_text': link.ecosystem.depth_range_text,
+                'ecosystem_temperature_range_text': link.ecosystem.temperature_range_text,
+                'location_name': link.ecosystem.location.name,
+                'location_vietnamese_name': link.ecosystem.location.vietnamese_name,
+                'local_depth_range_text': link.local_depth_range_text,
+                'adaptation_notes': link.adaptation_notes,
+            }
+            for link in species.ecosystem_links.all()
+        ]
+        context['references'] = [
+            {
+                'title': ref.title,
+                'publisher': ref.publisher,
+                'published_year': ref.published_year,
+                'url': ref.url,
+                'notes': ref.notes,
+            }
+            for ref in species.references.all()
+        ]
+        context['title'] = f"{species.vietnamese_name} ({species.name}) – Ocean Explorer"
         return context
 
 

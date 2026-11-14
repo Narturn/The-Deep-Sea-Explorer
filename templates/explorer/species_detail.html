@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'css/globe.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="species-detail-page">
+    <header class="ocean-explorer-header" role="banner">
+        <div class="ocean-brand-group">
+            <a href="{% url 'explorer:globe' %}" class="species-back-link">&larr; Quay về Ocean Explorer</a>
+            <span class="ocean-subtitle">Hồ sơ sinh vật đại dương</span>
+        </div>
+    </header>
+
+    <main class="species-detail-main" role="main">
+        <article class="species-detail-container" data-species-slug="{{ species.slug }}">
+            <!-- 1. Thông tin định danh & Ảnh minh họa -->
+            <section class="species-hero-section">
+                <div class="species-hero-content">
+                    <div class="species-badges-row">
+                        <span class="species-group-badge">{{ species.species_group_display }}</span>
+                        <span class="species-iucn-badge" data-iucn="{{ species.conservation_status }}">
+                            IUCN: {{ species.conservation_status_display }}
+                        </span>
+                    </div>
+
+                    <h1 class="species-detail-vi-title">{{ species.vietnamese_name }}</h1>
+                    <div class="species-detail-subtitles">
+                        <span class="species-detail-en-title">{{ species.name }}</span>
+                        <span class="species-detail-divider">•</span>
+                        <em class="species-detail-sci-title">{{ species.scientific_name }}</em>
+                    </div>
+
+                    <div class="species-depth-box">
+                        <span class="species-depth-label">Độ sâu phân bố ghi nhận:</span>
+                        <strong class="species-depth-value">{{ species.min_depth_m }}m – {{ species.max_depth_m }}m</strong>
+                    </div>
+
+                    {% if species.short_description %}
+                    <p class="species-short-summary">{{ species.short_description }}</p>
+                    {% endif %}
+                </div>
+
+                {% if species.image_url %}
+                <figure class="species-hero-figure">
+                    <div class="species-hero-image-wrap">
+                        <img src="{{ species.image_url }}" alt="{{ species.vietnamese_name }} ({{ species.name }})" class="species-hero-image">
+                    </div>
+                    {% if species.image_credit or species.image_license or species.image_source_url %}
+                    <figcaption class="species-image-caption">
+                        {% if species.image_credit %}
+                        <span>Ảnh: {{ species.image_credit }}</span>
+                        {% endif %}
+                        {% if species.image_license %}
+                        <span>Giấy phép: {{ species.image_license }}</span>
+                        {% endif %}
+                        {% if species.image_source_url %}
+                        <a href="{{ species.image_source_url }}" target="_blank" rel="noopener noreferrer">Nguồn ảnh gốc</a>
+                        {% endif %}
+                    </figcaption>
+                    {% endif %}
+                </figure>
+                {% endif %}
+            </section>
+
+            <!-- 2. Mô tả tổng quan & Đặc điểm sinh học -->
+            <div class="species-content-grid">
+                <section class="species-info-block">
+                    <h2 class="species-section-heading">Mô tả tổng quan</h2>
+                    <p class="species-section-text">{{ species.description }}</p>
+                </section>
+
+                {% if species.biological_traits %}
+                <section class="species-info-block">
+                    <h2 class="species-section-heading">Đặc điểm sinh học &amp; Thích nghi</h2>
+                    <p class="species-section-text">{{ species.biological_traits }}</p>
+                </section>
+                {% endif %}
+            </div>
+
+            <!-- 3. Các hệ sinh thái & Địa điểm phân bố -->
+            {% if ecosystem_links %}
+            <section class="species-info-block">
+                <h2 class="species-section-heading">Quần xã sinh vật &amp; Môi trường sống ({{ ecosystem_links|length }})</h2>
+                <ul class="species-ecosystems-grid">
+                    {% for link in ecosystem_links %}
+                    <li class="species-ecosystem-card" data-ecosystem-slug="{{ link.ecosystem_slug }}">
+                        <div class="species-ecosystem-top">
+                            <div>
+                                <span class="species-ecosystem-location">{{ link.location_vietnamese_name }} ({{ link.location_name }})</span>
+                                <h3 class="species-ecosystem-title">{{ link.ecosystem_vietnamese_name }} ({{ link.ecosystem_name }})</h3>
+                            </div>
+                            <span class="ecosystem-type-badge">{{ link.ecosystem_type_display }}</span>
+                        </div>
+                        <div class="ecosystem-specs">
+                            <span>Độ sâu quần xã: {{ link.ecosystem_depth_range_text }}</span>
+                            {% if link.local_depth_range_text %}
+                            <span>Độ sâu loài tại quần xã: {{ link.local_depth_range_text }}</span>
+                            {% endif %}
+                            {% if link.ecosystem_temperature_range_text %}
+                            <span>Nhiệt độ: {{ link.ecosystem_temperature_range_text }}</span>
+                            {% endif %}
+                        </div>
+                        {% if link.adaptation_notes %}
+                        <p class="species-ecosystem-notes">{{ link.adaptation_notes }}</p>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </section>
+            {% endif %}
+
+            <!-- 4. Nguồn tài liệu tham khảo khoa học -->
+            {% if references %}
+            <section class="species-info-block">
+                <h2 class="species-section-heading">Tài liệu tham khảo khoa học</h2>
+                <ul class="species-references-list">
+                    {% for ref in references %}
+                    <li class="species-reference-item">
+                        <div class="species-reference-main">
+                            <strong class="species-reference-title">{{ ref.title }}</strong>
+                            <span class="species-reference-meta">
+                                {% if ref.publisher %}{{ ref.publisher }}{% endif %}{% if ref.published_year %} ({{ ref.published_year }}){% endif %}
+                            </span>
+                        </div>
+                        {% if ref.notes %}
+                        <p class="species-reference-notes">{{ ref.notes }}</p>
+                        {% endif %}
+                        {% if ref.url %}
+                        <a href="{{ ref.url }}" class="species-reference-link" target="_blank" rel="noopener noreferrer">
+                            Xem hồ sơ nguồn &rarr;
+                        </a>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </section>
+            {% endif %}
+        </article>
+    </main>
+</div>
+{% endblock %}
