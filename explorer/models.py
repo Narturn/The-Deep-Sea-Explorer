@@ -314,3 +314,174 @@ class Ecosystem(models.Model):
         if not self.slug and self.name:
             self.slug = slugify(self.name)
 
+
+class MarineSpecies(models.Model):
+    """
+    Quản lý thông tin sinh học gốc của từng loài sinh vật đại dương (không trùng lặp loài).
+    Một loài có thể liên kết với nhiều quần xã (Ecosystem) khác nhau thông qua SpeciesEcosystem.
+    """
+    class SpeciesGroup(models.TextChoices):
+        FISH = "FISH", "Cá (Fish)"
+        MAMMAL = "MAMMAL", "Thú biển (Marine Mammal)"
+        INVERTEBRATE = "INVERTEBRATE", "Động vật không xương sống (Invertebrate)"
+        CORAL_FLORA = "CORAL_FLORA", "San hô & Thực vật biển (Coral & Marine Flora)"
+        REPTILE_BIRD = "REPTILE_BIRD", "Bò sát & Chim biển (Marine Reptile & Seabird)"
+
+    class ConservationStatus(models.TextChoices):
+        LC = "LC", "Ít quan tâm (LC)"
+        NT = "NT", "Sắp bị đe dọa (NT)"
+        VU = "VU", "Sắp nguy cấp (VU)"
+        EN = "EN", "Nguy cấp (EN)"
+        CR = "CR", "Cực kỳ nguy cấp (CR)"
+        DD = "DD", "Thiếu dữ liệu (DD)"
+        NE = "NE", "Chưa đánh giá (NE)"
+
+    name = models.CharField(max_length=150, verbose_name="Tên phổ thông quốc tế")
+    vietnamese_name = models.CharField(max_length=150, verbose_name="Tên phổ thông tiếng Việt")
+    scientific_name = models.CharField(
+        max_length=150,
+        unique=True,
+        verbose_name="Tên khoa học",
+        help_text="Tên khoa học chuẩn hai phần, duy nhất cho mỗi loài",
+    )
+    slug = models.SlugField(max_length=160, unique=True, verbose_name="Định danh (Slug)")
+    species_group = models.CharField(
+        max_length=30,
+        choices=SpeciesGroup.choices,
+        default=SpeciesGroup.FISH,
+        verbose_name="Nhóm sinh vật",
+    )
+    short_description = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Mô tả ngắn",
+    )
+    description = models.TextField(verbose_name="Mô tả tổng quan")
+    biological_traits = models.TextField(
+        blank=True,
+        verbose_name="Đặc điểm sinh học & thích nghi",
+    )
+    min_depth_m = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Độ sâu phân bố tối thiểu (m)",
+    )
+    max_depth_m = models.PositiveIntegerField(
+        verbose_name="Độ sâu phân bố tối đa (m)",
+    )
+    conservation_status = models.CharField(
+        max_length=10,
+        choices=ConservationStatus.choices,
+        default=ConservationStatus.NE,
+        verbose_name="Tình trạng bảo tồn (IUCN)",
+    )
+
+    # Quản lý hình ảnh và bản quyền
+    image_url = models.URLField(max_length=500, blank=True, verbose_name="URL hình ảnh trực tiếp")
+    image_source_url = models.URLField(max_length=500, blank=True, verbose_name="URL trang nguồn ảnh")
+    image_credit = models.CharField(max_length=200, blank=True, verbose_name="Tác giả / Sở hữu bản quyền")
+    image_license = models.CharField(max_length=100, blank=True, verbose_name="Giấy phép hình ảnh")
+
+    # Liên kết nhiều-nhiều với Ecosystem qua bảng trung gian SpeciesEcosystem và tái sử dụng ReferenceSource
+    ecosystems = models.ManyToManyField(
+        Ecosystem,
+        through="SpeciesEcosystem",
+        related_name="species",
+        blank=True,
+        verbose_name="Các quần xã sinh sống",
+    )
+    references = models.ManyToManyField(
+        ReferenceSource,
+        blank=True,
+        related_name="marine_species",
+        verbose_name="Nguồn tham khảo",
+    )
+
+    # Trạng thái kiểm duyệt và xuất bản (mặc định chưa công khai)
+    is_verified = models.BooleanField(
+        default=False,
+        verbose_name="Đã xác minh nguồn",
+    )
+    is_published = models.BooleanField(
+        default=False,
+        verbose_name="Được xuất bản",
+        help_text="Mặc định tắt để tránh công khai dữ liệu chưa được kiểm duyệt",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Cập nhật lần cuối")
+
+    class Meta:
+        verbose_name = "Sinh vật đại dương"
+        verbose_name_plural = "Các sinh vật đại dương"
+        ordering = ["vietnamese_name", "name"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(min_depth_m__lte=models.F("max_depth_m")),
+                name="species_min_depth_lte_max_depth",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.vietnamese_name} ({self.scientific_name})"
+
+    def clean(self):
+        super().clean()
+        if not self.slug and (self.name or self.scientific_name):
+            self.slug = slugify(self.name or self.scientific_name)
+
+        if self.min_depth_m is not None and self.max_depth_m is not None:
+            if self.min_depth_m > self.max_depth_m:
+                raise ValidationError({
+                    "min_depth_m": "Độ sâu phân bố tối thiểu không được lớn hơn độ sâu phân bố tối đa.",
+                    "max_depth_m": "Độ sâu phân bố tối đa phải lớn hơn hoặc bằng độ sâu tối thiểu.",
+                })
+
+
+class SpeciesEcosystem(models.Model):
+    """
+    Bảng trung gian kết nối MarineSpecies và Ecosystem.
+    Cho phép cùng một loài xuất hiện ở nhiều quần xã và lưu thông tin thích nghi theo từng môi trường.
+    """
+    species = models.ForeignKey(
+        MarineSpecies,
+        on_delete=models.CASCADE,
+        related_name="ecosystem_links",
+        verbose_name="Loài sinh vật",
+    )
+    ecosystem = models.ForeignKey(
+        Ecosystem,
+        on_delete=models.CASCADE,
+        related_name="species_links",
+        verbose_name="Quần xã sinh vật",
+    )
+    local_depth_range_text = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Khoảng độ sâu tại quần xã",
+        help_text="Tùy chọn: Độ sâu cư trú thực tế của loài riêng tại quần xã này",
+    )
+    adaptation_notes = models.TextField(
+        blank=True,
+        verbose_name="Ghi chú thích nghi tại quần xã",
+        help_text="Tùy chọn: Đặc điểm thích nghi hoặc vai trò sinh thái của loài tại môi trường này",
+    )
+    is_key_species = models.BooleanField(
+        default=False,
+        verbose_name="Loài đặc trưng của quần xã",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
+
+    class Meta:
+        verbose_name = "Liên kết Loài – Quần xã"
+        verbose_name_plural = "Các liên kết Loài – Quần xã"
+        ordering = ["ecosystem__location__sort_order", "ecosystem__name", "species__vietnamese_name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["species", "ecosystem"],
+                name="unique_species_per_ecosystem",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.species.vietnamese_name} @ {self.ecosystem.vietnamese_name}"
+
+

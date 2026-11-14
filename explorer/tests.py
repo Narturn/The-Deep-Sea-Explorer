@@ -2,7 +2,15 @@ import json
 from unittest.mock import MagicMock, patch
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
-from explorer.models import Ecosystem, ExplorerItem, OceanLayer, OceanLocation, ReferenceSource
+from explorer.models import (
+    Ecosystem,
+    ExplorerItem,
+    MarineSpecies,
+    OceanLayer,
+    OceanLocation,
+    ReferenceSource,
+    SpeciesEcosystem,
+)
 from explorer.views import IndexView, OceanGlobeView
 
 
@@ -315,6 +323,79 @@ class ExplorerValidationTests(SimpleTestCase):
             published_year=2023
         )
         self.assertEqual(str(ref), 'NOAA Ocean Exploration Report (2023)')
+
+    def test_marine_species_validation_and_defaults(self):
+        species = MarineSpecies(
+            name='Giant Tube Worm',
+            vietnamese_name='Giun ống khổng lồ',
+            scientific_name='Riftia pachyptila',
+            species_group=MarineSpecies.SpeciesGroup.INVERTEBRATE,
+            description='Sinh vật cộng sinh hóa tổng hợp quanh miệng phun thủy nhiệt.',
+            min_depth_m=1500,
+            max_depth_m=2800,
+        )
+        species.clean()
+        self.assertEqual(species.slug, 'giant-tube-worm')
+        self.assertFalse(species.is_published)
+        self.assertFalse(species.is_verified)
+        self.assertEqual(species.conservation_status, MarineSpecies.ConservationStatus.NE)
+        self.assertEqual(str(species), 'Giun ống khổng lồ (Riftia pachyptila)')
+
+        invalid_species = MarineSpecies(
+            name='Invalid Depth Fish',
+            vietnamese_name='Cá lỗi độ sâu',
+            scientific_name='Pisces invalidus',
+            description='Kiểm tra lỗi min_depth_m > max_depth_m',
+            min_depth_m=3000,
+            max_depth_m=1000,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            invalid_species.clean()
+        self.assertIn('min_depth_m', ctx.exception.message_dict)
+        self.assertIn('max_depth_m', ctx.exception.message_dict)
+
+    def test_species_ecosystem_constraints_and_str(self):
+        loc = OceanLocation(
+            name='East Pacific Rise',
+            vietnamese_name='Đới nâng Đông Thái Bình Dương',
+            slug='east-pacific-rise',
+            region='Đông Nam Thái Bình Dương',
+            latitude=-9.8333,
+            longitude=-104.2833,
+            max_depth_m=2800,
+            short_description='Đới tách giãn đại dương',
+            description='Mô tả chi tiết',
+        )
+        eco = Ecosystem(
+            location=loc,
+            name='Black Smoker Vents',
+            vietnamese_name='Quần xã ống khói đen',
+            slug='black-smoker-vents',
+            ecosystem_type=Ecosystem.EcosystemType.HYDROTHERMAL_VENT,
+            depth_range_text='2.400m – 2.800m',
+            light_level=Ecosystem.LightLevel.NONE,
+            description='Hệ sinh thái hóa tổng hợp',
+        )
+        species = MarineSpecies(
+            name='Giant Tube Worm',
+            vietnamese_name='Giun ống khổng lồ',
+            scientific_name='Riftia pachyptila',
+            slug='giant-tube-worm',
+            description='Mô tả',
+            min_depth_m=1500,
+            max_depth_m=2800,
+        )
+        link = SpeciesEcosystem(
+            species=species,
+            ecosystem=eco,
+            local_depth_range_text='2.450m – 2.750m',
+            adaptation_notes='Sống nhờ vi khuẩn oxy hóa H2S trong cơ quan trophosome.',
+            is_key_species=True,
+        )
+        self.assertEqual(str(link), 'Giun ống khổng lồ @ Quần xã ống khói đen')
+
+        constraint_names = [c.name for c in SpeciesEcosystem._meta.constraints]
+        self.assertIn('unique_species_per_ecosystem', constraint_names)
 
 
 class OceanGlobeViewTests(SimpleTestCase):

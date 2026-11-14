@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import Ecosystem, ExplorerItem, OceanLayer, OceanLocation, ReferenceSource
+from .models import (
+    Ecosystem,
+    ExplorerItem,
+    MarineSpecies,
+    OceanLayer,
+    OceanLocation,
+    ReferenceSource,
+    SpeciesEcosystem,
+)
 
 
 @admin.register(OceanLayer)
@@ -210,6 +218,19 @@ class OceanLocationAdmin(admin.ModelAdmin):
         return obj.ecosystems.count()
 
 
+class SpeciesEcosystemInline(admin.TabularInline):
+    model = SpeciesEcosystem
+    extra = 1
+    autocomplete_fields = ("species", "ecosystem")
+    fields = (
+        "species",
+        "ecosystem",
+        "is_key_species",
+        "local_depth_range_text",
+        "adaptation_notes",
+    )
+
+
 @admin.register(Ecosystem)
 class EcosystemAdmin(admin.ModelAdmin):
     list_display = (
@@ -219,10 +240,132 @@ class EcosystemAdmin(admin.ModelAdmin):
         "ecosystem_type",
         "depth_range_text",
         "light_level",
+        "species_count",
     )
     list_display_links = ("vietnamese_name", "name")
     list_filter = ("ecosystem_type", "light_level", "location")
     search_fields = ("name", "vietnamese_name", "description", "location__name", "location__vietnamese_name")
     ordering = ("location__sort_order", "name")
     prepopulated_fields = {"slug": ("name",)}
+    inlines = [SpeciesEcosystemInline]
+
+    @admin.display(description="Số loài sinh vật")
+    def species_count(self, obj):
+        return obj.species.count()
+
+
+@admin.register(MarineSpecies)
+class MarineSpeciesAdmin(admin.ModelAdmin):
+    list_display = (
+        "vietnamese_name",
+        "name",
+        "scientific_name",
+        "species_group",
+        "depth_range_display",
+        "conservation_status",
+        "ecosystem_count",
+        "is_verified",
+        "is_published",
+    )
+    list_display_links = ("vietnamese_name", "name")
+    list_filter = (
+        "species_group",
+        "conservation_status",
+        "is_verified",
+        "is_published",
+        "ecosystems__location",
+        "ecosystems",
+    )
+    search_fields = (
+        "vietnamese_name",
+        "name",
+        "scientific_name",
+        "short_description",
+        "description",
+        "biological_traits",
+    )
+    ordering = ("vietnamese_name", "name")
+    prepopulated_fields = {"slug": ("name",)}
+    filter_horizontal = ("references",)
+    list_editable = ("is_verified", "is_published")
+    inlines = [SpeciesEcosystemInline]
+    save_on_top = True
+
+    fieldsets = (
+        (
+            "Thông tin định danh loài",
+            {
+                "fields": (
+                    ("vietnamese_name", "name"),
+                    ("scientific_name", "slug"),
+                    ("species_group", "conservation_status"),
+                    ("min_depth_m", "max_depth_m"),
+                ),
+            },
+        ),
+        (
+            "Mô tả & Đặc điểm sinh học",
+            {
+                "fields": (
+                    "short_description",
+                    "description",
+                    "biological_traits",
+                ),
+            },
+        ),
+        (
+            "Hình ảnh & Bản quyền",
+            {
+                "fields": (
+                    "image_url",
+                    "image_source_url",
+                    ("image_credit", "image_license"),
+                ),
+            },
+        ),
+        (
+            "Thẩm định & Xuất bản",
+            {
+                "fields": (
+                    ("is_verified", "is_published"),
+                    "references",
+                ),
+            },
+        ),
+    )
+
+    @admin.display(description="Độ sâu phân bố", ordering="min_depth_m")
+    def depth_range_display(self, obj):
+        return f"{obj.min_depth_m:,}m – {obj.max_depth_m:,}m"
+
+    @admin.display(description="Số quần xã")
+    def ecosystem_count(self, obj):
+        return obj.ecosystems.count()
+
+
+@admin.register(SpeciesEcosystem)
+class SpeciesEcosystemAdmin(admin.ModelAdmin):
+    list_display = (
+        "species",
+        "ecosystem",
+        "location_display",
+        "local_depth_range_text",
+        "is_key_species",
+    )
+    list_filter = ("is_key_species", "ecosystem__location", "ecosystem")
+    search_fields = (
+        "species__vietnamese_name",
+        "species__name",
+        "species__scientific_name",
+        "ecosystem__vietnamese_name",
+        "ecosystem__name",
+        "adaptation_notes",
+    )
+    autocomplete_fields = ("species", "ecosystem")
+    list_editable = ("is_key_species",)
+
+    @admin.display(description="Địa điểm đại dương", ordering="ecosystem__location__sort_order")
+    def location_display(self, obj):
+        return obj.ecosystem.location
+
 
